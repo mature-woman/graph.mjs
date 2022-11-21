@@ -1,11 +1,17 @@
-"use strict";
+import victor from "https://cdn.skypack.dev/victor@1.1.0";
+
+("use strict");
 
 /**
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
  */
 class graph {
   // Оболочка (instanceof HTMLElement)
-  shell = document.getElementById("graph");
+  #shell = document.getElementById("graph");
+
+  get shell() {
+    return this.#shell;
+  }
 
   // Реестр узлов
   nodes = new Set();
@@ -16,17 +22,64 @@ class graph {
   // Класс узла
   node = class node {
     // Реестр входящих соединений
-    inputs = new Map();
+    #inputs = new Map();
+
+    // Реестр входящих соединений
+    get inputs() {
+      return this.#inputs;
+    }
 
     // Реестр исходящих соединений
-    outputs = new Map();
+    #outputs = new Map();
+
+    // Реестр исходящих соединений
+    get outputs() {
+      return this.#outputs;
+    }
+
+    // Оператор
+    #operator;
+
+    // Оператор
+    get operator() {
+      return this.#operator;
+    }
 
     // HTML-элемент
-    element;
+    #element;
+
+    // HTML-элемент
+    get element() {
+      return this.#element;
+    }
+
+    // Наблюдатель
+    #observer = null;
+
+    // Наблюдатель
+    get observer() {
+      return this.#observer;
+    }
+
+    // Реестр запрещённых к изменению параметров
+    #block = new Set(["events"]);
+
+    // Реестр запрещённых к изменению параметров
+    get block() {
+      return this.#block;
+    }
 
     // Параметры генерации
     #diameter = 100;
     #increase = 5;
+
+    // Параметры генерации
+    get diameter() {
+      return this.#diameter;
+    }
+    get increase() {
+      return this.#increase;
+    }
 
     constructor(data, graph) {
       // Инициализация оболочки
@@ -56,7 +109,10 @@ class graph {
       }
 
       // Запись в свойство
-      this.element = article;
+      this.#element = article;
+
+      // Запись в свойство
+      this.#operator = graph;
 
       // Запись в документ
       graph.shell.appendChild(article);
@@ -65,10 +121,212 @@ class graph {
       this.init();
     }
 
-    init() {
-      // Инициализация размера
+    init(increase = 0) {
+      // Изменение диаметра
+      if (increase !== 0) this.#diameter += this.#increase * increase;
+
+      // Инициализация размера элемента
       this.element.style.width = this.element.style.height =
-        this.#diameter + this.#increase * this.inputs.size + "px";
+        this.#diameter + "px";
+
+      // Инициализация ссылки на ядро
+      const _this = this;
+
+      // Инициализация наблюдателя
+      this.#observer = new MutationObserver(function (mutations) {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes") {
+            // Запись параметра в инстанцию бегущей строки
+            _this.configure(mutation.attributeName);
+          }
+        }
+      });
+
+      // Активация наблюдения
+      this.observer.observe(this.element, {
+        attributes: true,
+        attributeOldValue: true
+      });
+
+      // this.style.left = x + 'px';
+      // this.style.top = y + 'px';
+    }
+
+    configure(attribute) {
+      // Инициализация названия параметра
+      const parameter = (/^data-graph-(\w+)$/.exec(attribute) ?? [, null])[1];
+
+      if (typeof parameter === "string") {
+        // Параметр найден
+
+        // Проверка на разрешение изменения
+        if (this.#block.has(parameter)) return;
+
+        // Инициализация значения параметра
+        const value = this.element.getAttribute(attribute);
+
+        if (typeof value !== undefined || typeof value !== null) {
+          // Найдено значение
+
+          // Запрошено изменение координаты: x
+          if (parameter === "x") this.element.style.left = value + "px";
+
+          // Запрошено изменение координаты: y
+          if (parameter === "y") this.element.style.top = value + "px";
+
+          // Инициализация буфера для временных данных
+          let buffer;
+
+          // Запись параметра
+          this[parameter] = isNaN((buffer = parseFloat(value)))
+            ? value === "true"
+              ? true
+              : value === "false"
+              ? false
+              : value
+            : buffer;
+        }
+      }
+
+      return this;
+    }
+
+    move(x, y) {
+      // Запись отступов
+      this.element.style.left = x + "px";
+      this.element.style.top = y + "px";
+
+      // Запись аттрибутов с координатами
+      this.element.setAttribute("data-graph-x", x);
+      this.element.setAttribute("data-graph-y", y);
+
+      for (const [connection, target] of this.outputs) {
+        // Перебор исходящих соединений
+
+        // Инициализация координат для линии
+        const x1 = parseInt(this.element.style.left);
+        const y1 = parseInt(this.element.style.top);
+
+        // Запись новой координаты по горизонтали
+        connection.children[0].setAttribute(
+          "x1",
+          (isNaN(x1) ? 0 : x1) + this.element.offsetWidth / 2
+        );
+
+        // Запись новой координаты по вертикали
+        connection.children[0].setAttribute(
+          "y1",
+          (isNaN(y1) ? 0 : y1) + this.element.offsetHeight / 2
+        );
+      }
+
+      for (const [connection, target] of this.inputs) {
+        // Перебор входящих соединений
+
+        // Инициализация координат для линии
+        const x2 = parseInt(this.element.style.left);
+        const y2 = parseInt(this.element.style.top);
+
+        // Запись новой координаты по горизонтали
+        connection.children[0].setAttribute(
+          "x2",
+          (isNaN(x2) ? 0 : x2) + this.element.offsetWidth / 2
+        );
+
+        // Запись новой координаты по вертикали
+        connection.children[0].setAttribute(
+          "y2",
+          (isNaN(y2) ? 0 : y2) + this.element.offsetHeight / 2
+        );
+      }
+
+      // Инициализация ссылки на обрабатываемый объект
+      const _this = this;
+
+      // Инициализация наблюдателя
+      this.#observer = new MutationObserver(function (mutations) {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes") {
+            // Запись параметра в инстанцию бегущей строки
+            _this.collision(_this.operator.nodes);
+          }
+        }
+      });
+
+      // Активация наблюдения
+      this.observer.observe(this.element, {
+        attributes: true,
+        attributeFilter: ["data-graph-x", "data-graph-y"],
+        attributeOldValue: true
+      });
+    }
+
+    collision(nodes) {
+      // Инициализация буфера реестра узлов
+      const buffer = new Set(nodes);
+
+      // Удаление текущего узла из буфера
+      buffer.delete(this);
+
+      // Удаление текущего узла из буфера
+      buffer.delete(this);
+
+      // Обработка коллизии
+      for (const node of buffer) {
+        // Перебор узлов в реестре
+
+        // Инициализация вектора между узлами
+        let between;
+
+        // Инициализация ускорения
+        let increase = 0;
+
+        // Инициализация количества итераций
+        let iterations = 300;
+
+        do {
+          // Произошла коллизия (границы кругов перекрылись)
+
+          // Инициализация координат целевого узла
+          let x1 = parseInt(node.element.style.left);
+          x1 = (isNaN(x1) ? 0 : x1) + node.element.offsetWidth / 2;
+          let y1 = parseInt(node.element.style.top);
+          y1 = (isNaN(y1) ? 0 : y1) + node.element.offsetHeight / 2;
+
+          // Инициализация координат обрабатываемого узла
+          let x2 = parseInt(this.element.style.left);
+          x2 = (isNaN(x2) ? 0 : x2) + this.element.offsetWidth / 2;
+          let y2 = parseInt(this.element.style.top);
+          y2 = (isNaN(y2) ? 0 : y2) + this.element.offsetHeight / 2;
+
+          // Реинициализация вектора между узлами
+          between = new victor(x1 - x2, y1 - y2);
+
+          if (
+            between.length() > node.diameter / 2 + this.diameter / 2 ||
+            --iterations === 0
+          )
+            break;
+
+          console.log(node.diameter, this.diameter);
+
+          // let b = new victor(x1, y1).add(
+          //   new victor((vic.x * 2) / 100, (vic.y * 2) / 100)
+          // );
+
+          let b = new victor(x1, y1)
+            .add(new victor(between.x, between.y).norm().unfloat())
+            .subtract(
+              new victor(
+                node.element.offsetWidth / 2,
+                node.element.offsetHeight / 2
+              )
+            );
+
+          node.element.style.left = b.x + "px";
+          node.element.style.top = b.y + "px";
+        } while (between.length() <= node.diameter / 2 + this.diameter / 2);
+      }
     }
   };
 
@@ -95,16 +353,16 @@ class graph {
           const x = e.pageX - coords.left + pageXOffset;
           const y = e.pageY - coords.top + pageYOffset;
 
-          // Инициализация функции переноса
-          function move(e) {
-            // Запись нового отступа от верха
-            _this.shell.style.top = e.pageY - y + "px";
-
+          // Инициализация функции переноса полотна
+          function move(onmousemove) {
             // Запись нового отступа от лева
-            _this.shell.style.left = e.pageX - x + "px";
+            _this.shell.style.left = onmousemove.pageX - x + "px";
+
+            // Запись нового отступа от верха
+            _this.shell.style.top = onmousemove.pageY - y + "px";
           }
 
-          // Перенос
+          // Запись слушателя события: "перенос полотна"
           document.onmousemove = move;
         }
 
@@ -156,62 +414,18 @@ class graph {
             const n = node.element.getBoundingClientRect();
             const s = _this.shell.getBoundingClientRect();
 
-            // Инициализация функции переноса
+            // Инициализация функции переноса узла
             function move(onmousemove) {
-              // Запись нового отступа от верха
-              node.element.style.top =
-                onmousemove.pageY -
-                (onmousedown.pageY - n.top + s.top + pageYOffset) +
-                "px";
-
-              // Запись нового отступа от лева
-              node.element.style.left =
+              // Перемещение
+              node.move(
                 onmousemove.pageX -
-                (onmousedown.pageX - n.left + s.left + pageXOffset) +
-                "px";
-
-              for (const [connection, target] of node.outputs) {
-                // Перебор исходящих соединений
-
-                // Инициализация координат для линии
-                const x1 = parseInt(node.element.style.left);
-                const y1 = parseInt(node.element.style.top);
-
-                // Запись новой координаты по горизонтали
-                connection.children[0].setAttribute(
-                  "x1",
-                  (isNaN(x1) ? 0 : x1) + node.element.offsetWidth / 2
-                );
-
-                // Запись новой координаты по вертикали
-                connection.children[0].setAttribute(
-                  "y1",
-                  (isNaN(y1) ? 0 : y1) + node.element.offsetHeight / 2
-                );
-              }
-
-              for (const [connection, target] of node.inputs) {
-                // Перебор входящих соединений
-
-                // Инициализация координат для линии
-                const x2 = parseInt(node.element.style.left);
-                const y2 = parseInt(node.element.style.top);
-
-                // Запись новой координаты по горизонтали
-                connection.children[0].setAttribute(
-                  "x2",
-                  (isNaN(x2) ? 0 : x2) + node.element.offsetWidth / 2
-                );
-
-                // Запись новой координаты по вертикали
-                connection.children[0].setAttribute(
-                  "y2",
-                  (isNaN(y2) ? 0 : y2) + node.element.offsetHeight / 2
-                );
-              }
+                  (onmousedown.pageX - n.left + s.left + pageXOffset),
+                onmousemove.pageY -
+                  (onmousedown.pageY - n.top + s.top + pageYOffset)
+              );
             }
 
-            // Перенос
+            // Запись слушателя события: "перенос узла"
             document.onmousemove = move;
           }
 
@@ -284,9 +498,15 @@ class graph {
       this.connections.add([from, to]);
 
       // Реинициализация узла-получателя
-      to.init();
+      to.init(1);
 
       return svg;
     }
   };
 }
+
+document.dispatchEvent(
+  new CustomEvent("graph.loaded", {
+    detail: { graph }
+  })
+);
