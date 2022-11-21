@@ -240,25 +240,8 @@ class graph {
         );
       }
 
-      // Инициализация ссылки на обрабатываемый объект
-      const _this = this;
-
-      // Инициализация наблюдателя
-      this.#observer = new MutationObserver(function (mutations) {
-        for (const mutation of mutations) {
-          if (mutation.type === "attributes") {
-            // Запись параметра в инстанцию бегущей строки
-            _this.collision(_this.operator.nodes);
-          }
-        }
-      });
-
-      // Активация наблюдения
-      this.observer.observe(this.element, {
-        attributes: true,
-        attributeFilter: ["data-graph-x", "data-graph-y"],
-        attributeOldValue: true
-      });
+      // Обработка столкновений
+      this.collision(this.operator.nodes);
     }
 
     collision(nodes) {
@@ -302,19 +285,15 @@ class graph {
           // Реинициализация вектора между узлами
           between = new victor(x1 - x2, y1 - y2);
 
+          // Проверка на столкновение узлов
           if (
             between.length() > node.diameter / 2 + this.diameter / 2 ||
             --iterations === 0
           )
             break;
 
-          console.log(node.diameter, this.diameter);
-
-          // let b = new victor(x1, y1).add(
-          //   new victor((vic.x * 2) / 100, (vic.y * 2) / 100)
-          // );
-
-          let b = new victor(x1, y1)
+          // Инициализация координат вектора (узла с которым произошло столкновение)
+          let vector = new victor(x1, y1)
             .add(new victor(between.x, between.y).norm().unfloat())
             .subtract(
               new victor(
@@ -323,8 +302,8 @@ class graph {
               )
             );
 
-          node.element.style.left = b.x + "px";
-          node.element.style.top = b.y + "px";
+          // Перемещение узла с которым произошло столкновение
+          node.move(vector.x, vector.y);
         } while (between.length() <= node.diameter / 2 + this.diameter / 2);
       }
     }
