@@ -9,20 +9,31 @@ class graph {
   // Оболочка (instanceof HTMLElement)
   #shell = document.getElementById("graph");
 
+  // Оболочка (instanceof HTMLElement)
   get shell() {
     return this.#shell;
   }
 
   // Реестр узлов
-  nodes = new Set();
+  #nodes = new Set();
+
+  // Реестр узлов
+  get nodes() {
+    return this.#nodes;
+  }
 
   // Реестр соединений
-  connections = new Set();
+  #connections = new Set();
+
+  // Реестр соединений
+  get connections() {
+    return this.#connections;
+  }
 
   // Класс узла
-  node = class node {
+  #node = class node {
     // Реестр входящих соединений
-    #inputs = new Map();
+    #inputs = new Set();
 
     // Реестр входящих соединений
     get inputs() {
@@ -30,7 +41,7 @@ class graph {
     }
 
     // Реестр исходящих соединений
-    #outputs = new Map();
+    #outputs = new Set();
 
     // Реестр исходящих соединений
     get outputs() {
@@ -81,18 +92,18 @@ class graph {
       return this.#increase;
     }
 
-    constructor(data, graph) {
+    constructor(operator, data) {
       // Инициализация оболочки
       const article = document.createElement("article");
-      article.id = graph.nodes.size;
+      article.id = operator.nodes.size;
       article.classList.add("node", "unselectable");
       article.style.top =
-        graph.shell.offsetHeight / 2 -
+        operator.shell.offsetHeight / 2 -
         this.#diameter / 2 +
         (0.5 - Math.random()) * 500 +
         "px";
       article.style.left =
-        graph.shell.offsetWidth / 2 -
+        operator.shell.offsetWidth / 2 -
         this.#diameter / 2 +
         (0.5 - Math.random()) * 500 +
         "px";
@@ -112,10 +123,10 @@ class graph {
       this.#element = article;
 
       // Запись в свойство
-      this.#operator = graph;
+      this.#operator = operator;
 
       // Запись в документ
-      graph.shell.appendChild(article);
+      operator.shell.appendChild(article);
 
       // Инициализация
       this.init();
@@ -147,9 +158,6 @@ class graph {
         attributes: true,
         attributeOldValue: true
       });
-
-      // this.style.left = x + 'px';
-      // this.style.top = y + 'px';
     }
 
     configure(attribute) {
@@ -200,45 +208,11 @@ class graph {
       this.element.setAttribute("data-graph-x", x);
       this.element.setAttribute("data-graph-y", y);
 
-      for (const [connection, target] of this.outputs) {
-        // Перебор исходящих соединений
+      // Перемещение исходящих соединений до узла
+      for (const connection of this.outputs) connection.move(this);
 
-        // Инициализация координат для линии
-        const x1 = parseInt(this.element.style.left);
-        const y1 = parseInt(this.element.style.top);
-
-        // Запись новой координаты по горизонтали
-        connection.children[0].setAttribute(
-          "x1",
-          (isNaN(x1) ? 0 : x1) + this.element.offsetWidth / 2
-        );
-
-        // Запись новой координаты по вертикали
-        connection.children[0].setAttribute(
-          "y1",
-          (isNaN(y1) ? 0 : y1) + this.element.offsetHeight / 2
-        );
-      }
-
-      for (const [connection, target] of this.inputs) {
-        // Перебор входящих соединений
-
-        // Инициализация координат для линии
-        const x2 = parseInt(this.element.style.left);
-        const y2 = parseInt(this.element.style.top);
-
-        // Запись новой координаты по горизонтали
-        connection.children[0].setAttribute(
-          "x2",
-          (isNaN(x2) ? 0 : x2) + this.element.offsetWidth / 2
-        );
-
-        // Запись новой координаты по вертикали
-        connection.children[0].setAttribute(
-          "y2",
-          (isNaN(y2) ? 0 : y2) + this.element.offsetHeight / 2
-        );
-      }
+      // Перемещение входящих соединений до узла
+      for (const connection of this.inputs) connection.move(this);
 
       // Обработка столкновений
       this.collision(this.operator.nodes);
@@ -309,6 +283,150 @@ class graph {
     }
   };
 
+  // Класс узла
+  get node() {
+    return this.#node;
+  }
+
+  // Класс соединения
+  #connection = class connection {
+    // HTML-элемент
+    #element;
+
+    // HTML-элемент
+    get element() {
+      return this.#element;
+    }
+
+    // Инстанция node от которой начинается соединение
+    #from;
+
+    // Инстанция node от которой начинается соединение
+    get from() {
+      return this.#from;
+    }
+
+    // Инстанция node на которой заканчивается соединение
+    #to;
+
+    // Инстанция node на которой заканчивается соединение
+    get to() {
+      return this.#to;
+    }
+
+    // Оператор
+    #operator;
+
+    // Оператор
+    get operator() {
+      return this.#operator;
+    }
+
+    constructor(operator, from, to) {
+      // Запись свойства
+      this.#operator = operator;
+
+      // Запись свойства
+      this.#from = from;
+
+      // Запись свойства
+      this.#to = to;
+
+      // Инициализация оболочки
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.id = operator.connections.size;
+      svg.classList.add("connection");
+      svg.setAttribute("data-from", from.element.id);
+      svg.setAttribute("data-to", to.element.id);
+
+      // Инициализация универсального буфера
+      let buffer;
+
+      // Инициализация оболочки
+      const line = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
+      line.setAttribute(
+        "x1",
+        (isNaN((buffer = parseInt(from.element.style.left))) ? 0 : buffer) +
+          from.element.offsetWidth / 2
+      );
+      line.setAttribute(
+        "y1",
+        (isNaN((buffer = parseInt(from.element.style.top))) ? 0 : buffer) +
+          from.element.offsetHeight / 2
+      );
+      line.setAttribute(
+        "x2",
+        (isNaN((buffer = parseInt(to.element.style.left))) ? 0 : buffer) +
+          to.element.offsetWidth / 2
+      );
+      line.setAttribute(
+        "y2",
+        (isNaN((buffer = parseInt(to.element.style.top))) ? 0 : buffer) +
+          to.element.offsetHeight / 2
+      );
+      line.setAttribute("stroke", "grey");
+      line.setAttribute("stroke-width", "8px");
+
+      // Запись свойства
+      this.#element = svg;
+
+      // Запись в оболочку
+      svg.append(line);
+
+      // Запись в документ
+      operator.shell.appendChild(svg);
+    }
+
+    /**
+     * Переместить
+     *
+     * @param {node} node Инстанция узла (связанного с соединением)
+     */
+    move(node) {
+      // Инициализация названий аттрибутов
+      let x, y;
+
+      if (node === this.from) {
+        // Исходящее соединение
+
+        // Запись названий аттрибутов
+        x = "x1";
+        y = "y1";
+      } else if (node === this.to) {
+        // Входящее соединение
+
+        // Запись названий аттрибутов
+        x = "x2";
+        y = "y2";
+      } else return;
+
+      // Инициализация универсального буфера
+      let buffer;
+
+      // Запись отступа (координаты по горизонтали)
+      this.element.children[0].setAttribute(
+        x,
+        (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
+          node.element.offsetWidth / 2
+      );
+
+      // Запись отступа (координаты по вертикали)
+      this.element.children[0].setAttribute(
+        y,
+        (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
+          node.element.offsetHeight / 2
+      );
+    }
+  };
+
+  // Класс соединения
+  get connection() {
+    return this.#connection;
+  }
+
   #move = true;
   #camera = true;
 
@@ -362,7 +480,7 @@ class graph {
       // Получен обязательный входной параметр в правильном типе
 
       // Инициализация узла
-      const node = new this.node(data, this);
+      const node = new this.node(this, data);
 
       // Инициализация ссылки на обрабатываемый объект
       const _this = this;
@@ -434,52 +552,20 @@ class graph {
     if (from instanceof this.node && to instanceof this.node) {
       // Получены обязательные входные параметры в правильном типе
 
-      // Инициализация оболочки
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.id = this.connections.size;
-      svg.classList.add("connection");
-      svg.setAttribute("data-from", from.element.id);
-      svg.setAttribute("data-to", to.element.id);
-
-      // Инициализация координат для линии
-      let x1 = parseInt(from.element.style.left);
-      x1 = isNaN(x1) ? 0 : x1;
-      let y1 = parseInt(from.element.style.top);
-      y1 = isNaN(y1) ? 0 : y1;
-      let x2 = parseInt(to.element.style.left);
-      x2 = isNaN(x2) ? 0 : x2;
-      let y2 = parseInt(to.element.style.top);
-      y2 = isNaN(y2) ? 0 : y2;
-
-      // Инициализация оболочки
-      const line = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "line"
-      );
-      line.setAttribute("x1", x1 + from.element.offsetWidth / 2);
-      line.setAttribute("y1", y1 + from.element.offsetHeight / 2);
-      line.setAttribute("x2", x2 + to.element.offsetWidth / 2);
-      line.setAttribute("y2", y2 + to.element.offsetHeight / 2);
-      line.setAttribute("stroke", "grey");
-      line.setAttribute("stroke-width", "8px");
-
-      // Запись в оболочку
-      svg.append(line);
-
-      // Запись в документ
-      this.shell.appendChild(svg);
+      // Инициализация соединения
+      const connection = new this.connection(this, from, to);
 
       // Запись соединений в реестры узлов
-      from.outputs.set(svg, to);
-      to.inputs.set(svg, from);
+      from.outputs.add(connection);
+      to.inputs.add(connection);
 
       // Запись в реестр ядра
-      this.connections.add([from, to]);
+      this.connections.add(connection);
 
       // Реинициализация узла-получателя
       to.init(1);
 
-      return svg;
+      return connection;
     }
   };
 }
