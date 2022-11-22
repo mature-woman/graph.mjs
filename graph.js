@@ -8,24 +8,18 @@ import victor from "https://cdn.skypack.dev/victor@1.1.0";
 class graph {
   // Оболочка (instanceof HTMLElement)
   #shell = document.getElementById("graph");
-
-  // Оболочка (instanceof HTMLElement)
   get shell() {
     return this.#shell;
   }
 
   // Реестр узлов
   #nodes = new Set();
-
-  // Реестр узлов
   get nodes() {
     return this.#nodes;
   }
 
   // Реестр соединений
   #connections = new Set();
-
-  // Реестр соединений
   get connections() {
     return this.#connections;
   }
@@ -34,79 +28,70 @@ class graph {
   #node = class node {
     // Реестр входящих соединений
     #inputs = new Set();
-
-    // Реестр входящих соединений
     get inputs() {
       return this.#inputs;
     }
 
     // Реестр исходящих соединений
     #outputs = new Set();
-
-    // Реестр исходящих соединений
     get outputs() {
       return this.#outputs;
     }
 
     // Оператор
     #operator;
-
-    // Оператор
     get operator() {
       return this.#operator;
     }
 
     // HTML-элемент
     #element;
-
-    // HTML-элемент
     get element() {
       return this.#element;
     }
 
     // Наблюдатель
     #observer = null;
-
-    // Наблюдатель
     get observer() {
       return this.#observer;
     }
 
     // Реестр запрещённых к изменению параметров
     #block = new Set(["events"]);
-
-    // Реестр запрещённых к изменению параметров
     get block() {
       return this.#block;
     }
 
-    // Параметры генерации
+    // Диаметр узла
     #diameter = 100;
-    #increase = 5;
-
-    // Параметры генерации
     get diameter() {
       return this.#diameter;
     }
+
+    // Степень увеличения диаметра
+    #increase = 0;
     get increase() {
       return this.#increase;
     }
 
+    // Величина степени увеличения диаметра
+    #addition = 12;
+    get addition() {
+      return this.#addition;
+    }
+
+    // Обработка событий
+    actions = {
+      collision: true,
+      repulsion: true
+    };
+
     constructor(operator, data) {
-      // Инициализация оболочки
-      const article = document.createElement("article");
-      article.id = operator.nodes.size;
-      article.classList.add("node", "unselectable");
-      article.style.top =
-        operator.shell.offsetHeight / 2 -
-        this.#diameter / 2 +
-        (0.5 - Math.random()) * 500 +
-        "px";
-      article.style.left =
-        operator.shell.offsetWidth / 2 -
-        this.#diameter / 2 +
-        (0.5 - Math.random()) * 500 +
-        "px";
+      // Инициализация HTML-элемента узла
+      const a = document.createElement("a");
+      a.id = operator.nodes.size;
+      a.classList.add("node", "unselectable");
+      if (typeof data.href === "string") a.href = data.href;
 
       if (typeof data.title === "string") {
         // Найден заголовок узла
@@ -116,27 +101,43 @@ class graph {
         title.innerText = data.title;
 
         // Запись в оболочку
-        article.appendChild(title);
+        a.appendChild(title);
       }
 
+      // Запись в документ
+      operator.shell.appendChild(a);
+
       // Запись в свойство
-      this.#element = article;
+      this.#element = a;
 
       // Запись в свойство
       this.#operator = operator;
 
-      // Запись в документ
-      operator.shell.appendChild(article);
-
       // Инициализация
       this.init();
+
+      // Перемещение
+      this.move(
+        operator.shell.offsetWidth / 2 -
+          this.#diameter / 2 +
+          (0.5 - Math.random()) * 500,
+        operator.shell.offsetHeight / 2 -
+          this.#diameter / 2 +
+          (0.5 - Math.random()) * 500,
+        true,
+        true
+      );
     }
 
     init(increase = 0) {
-      // Изменение диаметра
-      if (increase !== 0) this.#diameter += this.#increase * increase;
+      // Запись в свойство
+      this.#increase = increase;
 
-      // Инициализация размера элемента
+      // Инициализация диаметра
+      if (this.#increase !== 0)
+        this.#diameter += this.#addition ** this.#increase;
+
+      // Инициализация размера HTML-элемента
       this.element.style.width = this.element.style.height =
         this.#diameter + "px";
 
@@ -147,6 +148,8 @@ class graph {
       this.#observer = new MutationObserver(function (mutations) {
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
+            // Перехвачено изменение аттрибута
+
             // Запись параметра в инстанцию бегущей строки
             _this.configure(mutation.attributeName);
           }
@@ -158,6 +161,191 @@ class graph {
         attributes: true,
         attributeOldValue: true
       });
+    }
+
+    move(x, y, collision = true, repulsion = false) {
+      // Запись отступов
+      this.element.style.left = x + "px";
+      this.element.style.top = y + "px";
+
+      // Запись аттрибутов с координатами
+      this.element.setAttribute("data-graph-x", x);
+      this.element.setAttribute("data-graph-y", y);
+
+      // Синхронизация местоположения исходящих и входящих соединений
+      for (const connection of this.outputs) connection.sync(this);
+
+      // Синхронизация местоположения входящих соединений
+      for (const connection of this.inputs) connection.sync(this);
+
+      // Обработка столкновений
+      if (collision) this.collision(this.operator.nodes);
+
+      // Обработка отталкивания
+      if (repulsion) this.repulsion(this.operator.nodes);
+    }
+
+    collision(nodes) {
+      // Инициализация буфера реестра узлов
+      const registry = new Set(nodes);
+
+      // Удаление текущего узла из буфера
+      registry.delete(this);
+
+      // Обработка коллизии
+      for (const node of registry) {
+        // Перебор узлов в реестре
+
+        // Инициализация вектора между узлами
+        let between;
+
+        // Инициализация ускорения
+        let increase = 0;
+
+        // Инициализация максимального количества итераций
+        let iterations = 300;
+
+        do {
+          // Произошла коллизия (границы кругов перекрылись)
+
+          // Инициализация универсального буфера
+          let buffer;
+
+          // Инициализация координат целевого узла
+          let x1 =
+            (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
+            node.element.offsetWidth / 2;
+          let y1 =
+            (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
+            node.element.offsetHeight / 2;
+
+          // Инициализация координат обрабатываемого узла
+          let x2 =
+            (isNaN((buffer = parseInt(this.element.style.left))) ? 0 : buffer) +
+            this.element.offsetWidth / 2;
+          let y2 =
+            (isNaN((buffer = parseInt(this.element.style.top))) ? 0 : buffer) +
+            this.element.offsetHeight / 2;
+
+          // Реинициализация вектора между узлами
+          between = new victor(x1 - x2, y1 - y2);
+
+          // Проверка на столкновение узлов
+          if (
+            !node.actions.collision ||
+            between.length() > node.diameter / 2 + this.diameter / 2 ||
+            --iterations <= 0
+          )
+            break;
+
+          // Инициализация координат вектора (узла с которым произошло столкновение)
+          let vector = new victor(x1, y1)
+            .add(new victor(between.x, between.y).norm().unfloat())
+            .subtract(
+              new victor(
+                node.element.offsetWidth / 2,
+                node.element.offsetHeight / 2
+              )
+            );
+
+          // Перемещение узла с которым произошло столкновение
+          if (node.actions.collision) node.move(vector.x, vector.y, true, true);
+
+          // Проверка на столкновение узлов
+        } while (
+          node.actions.collision &&
+          between.length() <= node.diameter / 2 + this.diameter / 2
+        );
+      }
+    }
+
+    repulsion(nodes) {
+      // Инициализация буфера реестра узлов
+      const registry = new Set(nodes);
+
+      // Удаление текущего узла из буфера
+      registry.delete(this);
+
+      // Инициализация ссылки на ядро
+      const _this = this;
+
+      // Обработка отталкивания
+      for (const node of registry) {
+        // Перебор узлов в буфере реестра
+
+        // Инициализация вектора между узлами
+        let between;
+
+        // Минимальная дистанция между узлами
+        const distance = 100;
+
+        // Инициализация максимального количества итераций
+        let iterations = 300;
+
+        function move() {
+          // Инициализация универсального буфера
+          let buffer;
+
+          // Инициализация координат целевого узла
+          let x1 =
+            (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
+            node.element.offsetWidth / 2;
+          let y1 =
+            (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
+            node.element.offsetHeight / 2;
+
+          // Инициализация координат обрабатываемого узла
+          let x2 =
+            (isNaN((buffer = parseInt(_this.element.style.left)))
+              ? 0
+              : buffer) +
+            _this.element.offsetWidth / 2;
+          let y2 =
+            (isNaN((buffer = parseInt(_this.element.style.top))) ? 0 : buffer) +
+            _this.element.offsetHeight / 2;
+
+          // Реинициализация вектора между узлами
+          between = new victor(x1 - x2, y1 - y2);
+
+          // Проверка на столкновение узлов
+          if (
+            !node.actions.repulsion ||
+            between.length() >
+              node.diameter / 2 +
+                _this.diameter / 2 +
+                distance +
+                (_this.diameter / 4) ** _this.increase ||
+            --iterations <= 0
+          )
+            return;
+
+          // Инициализация координат вектора (узла с которым произошло столкновение)
+          let vector = new victor(x1, y1)
+            .add(new victor(between.x, between.y).norm().unfloat())
+            .subtract(
+              new victor(
+                node.element.offsetWidth / 2,
+                node.element.offsetHeight / 2
+              )
+            );
+
+          // Перемещение узла с которым произошло столкновение
+          if (node.actions.repulsion) node.move(vector.x, vector.y, true, true);
+
+          // Проверка расстояния
+          if (
+            node.actions.repulsion &&
+            between.length() <=
+              node.diameter / 2 +
+                _this.diameter / 2 +
+                distance +
+                (_this.diameter / 4) ** (_this.increase ** _this.increase)
+          )
+            setTimeout(move, between.length() / 100);
+        }
+
+        if (node.actions.repulsion) move();
+      }
     }
 
     configure(attribute) {
@@ -194,91 +382,6 @@ class graph {
               : value
             : buffer;
         }
-      }
-
-      return this;
-    }
-
-    move(x, y) {
-      // Запись отступов
-      this.element.style.left = x + "px";
-      this.element.style.top = y + "px";
-
-      // Запись аттрибутов с координатами
-      this.element.setAttribute("data-graph-x", x);
-      this.element.setAttribute("data-graph-y", y);
-
-      // Перемещение исходящих соединений до узла
-      for (const connection of this.outputs) connection.move(this);
-
-      // Перемещение входящих соединений до узла
-      for (const connection of this.inputs) connection.move(this);
-
-      // Обработка столкновений
-      this.collision(this.operator.nodes);
-    }
-
-    collision(nodes) {
-      // Инициализация буфера реестра узлов
-      const buffer = new Set(nodes);
-
-      // Удаление текущего узла из буфера
-      buffer.delete(this);
-
-      // Удаление текущего узла из буфера
-      buffer.delete(this);
-
-      // Обработка коллизии
-      for (const node of buffer) {
-        // Перебор узлов в реестре
-
-        // Инициализация вектора между узлами
-        let between;
-
-        // Инициализация ускорения
-        let increase = 0;
-
-        // Инициализация количества итераций
-        let iterations = 300;
-
-        do {
-          // Произошла коллизия (границы кругов перекрылись)
-
-          // Инициализация координат целевого узла
-          let x1 = parseInt(node.element.style.left);
-          x1 = (isNaN(x1) ? 0 : x1) + node.element.offsetWidth / 2;
-          let y1 = parseInt(node.element.style.top);
-          y1 = (isNaN(y1) ? 0 : y1) + node.element.offsetHeight / 2;
-
-          // Инициализация координат обрабатываемого узла
-          let x2 = parseInt(this.element.style.left);
-          x2 = (isNaN(x2) ? 0 : x2) + this.element.offsetWidth / 2;
-          let y2 = parseInt(this.element.style.top);
-          y2 = (isNaN(y2) ? 0 : y2) + this.element.offsetHeight / 2;
-
-          // Реинициализация вектора между узлами
-          between = new victor(x1 - x2, y1 - y2);
-
-          // Проверка на столкновение узлов
-          if (
-            between.length() > node.diameter / 2 + this.diameter / 2 ||
-            --iterations === 0
-          )
-            break;
-
-          // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new victor(x1, y1)
-            .add(new victor(between.x, between.y).norm().unfloat())
-            .subtract(
-              new victor(
-                node.element.offsetWidth / 2,
-                node.element.offsetHeight / 2
-              )
-            );
-
-          // Перемещение узла с которым произошло столкновение
-          node.move(vector.x, vector.y);
-        } while (between.length() <= node.diameter / 2 + this.diameter / 2);
       }
     }
   };
@@ -381,26 +484,27 @@ class graph {
     }
 
     /**
-     * Переместить
+     * Синхронизировать местоположение со связанным узлом
      *
      * @param {node} node Инстанция узла (связанного с соединением)
      */
-    move(node) {
+    sync(node) {
       // Инициализация названий аттрибутов
-      let x, y;
+      let x = "x",
+        y = "y";
 
       if (node === this.from) {
         // Исходящее соединение
 
         // Запись названий аттрибутов
-        x = "x1";
-        y = "y1";
+        x += 1;
+        y += 1;
       } else if (node === this.to) {
         // Входящее соединение
 
         // Запись названий аттрибутов
-        x = "x2";
-        y = "y2";
+        x += 2;
+        y += 2;
       } else return;
 
       // Инициализация универсального буфера
@@ -513,12 +617,17 @@ class graph {
 
             // Инициализация функции переноса узла
             function move(onmousemove) {
+              // Запись обработки столкновений и отталкивания
+              node.actions.collision = node.actions.repulsion = false;
+
               // Перемещение
               node.move(
                 onmousemove.pageX -
                   (onmousedown.pageX - n.left + s.left + pageXOffset),
                 onmousemove.pageY -
-                  (onmousedown.pageY - n.top + s.top + pageYOffset)
+                  (onmousedown.pageY - n.top + s.top + pageYOffset),
+                true,
+                true
               );
             }
 
@@ -531,6 +640,9 @@ class graph {
             // Очистка обработчиков событий
             document.onmousemove = null;
             node.element.onmouseup = null;
+
+            // Запись обработки столкновений и отталкивания
+            node.actions.collision = node.actions.repulsion = true;
 
             // Позиционирование вместе остальными узлами
             node.element.style.zIndex = 500;
