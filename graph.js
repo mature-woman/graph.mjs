@@ -1,6 +1,6 @@
-import victor from "https://cdn.skypack.dev/victor@1.1.0";
+import Victor from "https://cdn.skypack.dev/victor@1.1.0";
 
-("use strict");
+'use strict';
 
 /**
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
@@ -352,7 +352,7 @@ class graph {
             this.element.offsetHeight / 2;
 
           // Реинициализация вектора между узлами
-          between = new victor(x1 - x2, y1 - y2);
+          between = new Victor(x1 - x2, y1 - y2);
 
           // Узлы преодолели расстояние столкновения?
           if (
@@ -363,10 +363,10 @@ class graph {
             break;
 
           // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new victor(x1, y1)
-            .add(new victor(between.x, between.y).norm().unfloat())
+          let vector = new Victor(x1, y1)
+            .add(new Victor(between.x, between.y).norm().unfloat())
             .subtract(
-              new victor(
+              new Victor(
                 node.element.offsetWidth / 2,
                 node.element.offsetHeight / 2
               )
@@ -465,7 +465,7 @@ class graph {
             _this.element.offsetHeight / 2;
 
           // Реинициализация вектора между узлами
-          between = new victor(x1 - x2, y1 - y2);
+          between = new Victor(x1 - x2, y1 - y2);
 
           // Инициализация увеличения
           let increase =
@@ -485,10 +485,10 @@ class graph {
             return;
 
           // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new victor(x1, y1)
-            .add(new victor(between.x, between.y).norm().unfloat())
+          let vector = new Victor(x1, y1)
+            .add(new Victor(between.x, between.y).norm().unfloat())
             .subtract(
-              new victor(
+              new Victor(
                 node.element.offsetWidth / 2,
                 node.element.offsetHeight / 2
               )
@@ -596,7 +596,7 @@ class graph {
             _this.element.offsetHeight / 2;
 
           // Реинициализация вектора между узлами
-          between = new victor(x1 - x2, y1 - y2);
+          between = new Victor(x1 - x2, y1 - y2);
 
           // Инициализация увеличения
           let increase =
@@ -616,10 +616,10 @@ class graph {
             return;
 
           // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new victor(x1, y1)
-            .add(new victor(between.x, between.y).norm().invert().unfloat())
+          let vector = new Victor(x1, y1)
+            .add(new Victor(between.x, between.y).norm().invert().unfloat())
             .subtract(
-              new victor(
+              new Victor(
                 node.element.offsetWidth / 2,
                 node.element.offsetHeight / 2
               )
@@ -848,7 +848,7 @@ class graph {
 
   constructor(shell, camera = true) {
     // Запись оболочки
-    if (shell instanceof HTMLElement) this.shell = shell;
+    if (shell instanceof HTMLElement) this.#shell = shell;
 
     // Инициализация ссылки на обрабатываемый объект
     const _this = this;
