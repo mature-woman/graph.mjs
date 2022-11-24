@@ -1,6 +1,6 @@
 import Victor from "https://cdn.skypack.dev/victor@1.1.0";
 
-'use strict';
+("use strict");
 
 /**
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
@@ -95,27 +95,52 @@ class graph {
 
     constructor(operator, data) {
       // Инициализация HTML-элемента узла
-      const a = document.createElement("a");
-      a.id = operator.nodes.size;
-      a.classList.add("node", "unselectable");
-      if (typeof data.href === "string") a.href = data.href;
+      const article = document.createElement("article");
+      article.id = operator.nodes.size;
+      article.classList.add("node", "unselectable");
+      if (typeof data.href === "string") {
+        article.href = data.href;
+      }
 
-      if (typeof data.title === "string") {
-        // Найден заголовок узла
+      // Инициализация заголовка-ссылки
+      const title = document.createElement("a");
+      title.innerText = data.title ?? data.link ?? "Неизвестно";
+      if (typeof data.link === "string") title.href = data.link;
+
+      // Запись в оболочку
+      article.appendChild(title);
+
+      if (typeof data.description === "string") {
+        // Найдено описание узла
 
         // Инициализация заголовка
-        const title = document.createElement("h4");
-        title.innerText = data.title;
+        const description = document.createElement("p");
+        description.innerText = data.description;
+        description.style.display = "none";
+        article.setAttribute(
+          "onclick",
+          "const description = this.getElementsByTagName('p')[0]; description.style.display === 'none' ? description.style.display = null : description.style.display = 'none'"
+        );
 
         // Запись в оболочку
-        a.appendChild(title);
+        article.appendChild(description);
+      }
+
+      if (
+        typeof data.append === "HTMLCollection" ||
+        typeof data.append === "HTMLElement"
+      ) {
+        // Найдены другие HTML-элементы узла
+
+        // Запись в оболочку
+        article.appendChild(data.append);
       }
 
       // Запись в документ
-      operator.shell.appendChild(a);
+      operator.shell.appendChild(article);
 
       // Запись в свойство
-      this.#element = a;
+      this.#element = article;
 
       // Запись в свойство
       this.#operator = operator;
