@@ -117,26 +117,67 @@ class graph {
 
       // Запись блокировки открытия описания в случае, если был перемещён узел
       title.onmousedown = (onmousedown) => {
-        // Запись открытия описания
-        title.onclick = (onclick) => { show() }
+        // Инициализация координат
+        let x = onmousedown.pageX;
+        let y = onmousedown.pageY;
+
+        // Запись события открытия описания
+        title.onclick = (onclick) => {
+          // Отображение описания
+          show();
+
+          // Удаление событий
+          title.onclick = title.onmousemove = null;
+
+          // Реинициализация координат
+          x = onclick.pageX;
+          y = onclick.pageY;
+
+          // Удаление иконки курсора
+          title.style.cursor = null;
+
+          return true;
+        }
 
         title.onmousemove = (onmousemove) => {
           // Курсор сдвинут более чем на 15 пикселей?
-          if (Math.abs(onmousedown.pageX - onmousemove.pageX) > 15 || Math.abs(onmousedown.pageY - onmousemove.pageY) > 15) {
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
             // Запись иконки курсора
             title.style.cursor = 'grabbing';
 
-            // Запись события для возврата иконки курсора
-            title.onmouseup = fn => {
+            // Запись события для переноса узла
+            title.onclick = (onclick) => {
               // Удаление событий
-              title.onmouseup = title.onmousemove = null;
+              title.onclick = title.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
 
               // Удаление иконки курсора
               title.style.cursor = null;
-            }
 
-            title.onclick = (onclick) => { return false }
-          } else title.onclick = (onclick) => { show() }
+              return false;
+            }
+          } else {
+            // Запись события открытия описания
+            title.onclick = (onclick) => {
+              // Отображение описания
+              show();
+
+              // Удаление событий
+              title.onclick = title.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
+
+              // Удаление иконки курсора
+              title.style.cursor = null;
+
+              return true;
+            };
+          }
         }
       };
 
@@ -170,23 +211,61 @@ class graph {
 
       // Запись блокировки перехода по ссылке в случае, если был перемещён узел
       a.onmousedown = (onmousedown) => {
+        // Инициализация координат
+        let x = onmousedown.pageX;
+        let y = onmousedown.pageY;
+
+        // Запись события открытия описания
+        a.onclick = (onclick) => {
+          // Удаление событий
+          a.onclick = a.onmousemove = null;
+
+          // Реинициализация координат
+          x = onclick.pageX;
+          y = onclick.pageY;
+
+          // Удаление иконки курсора
+          a.style.cursor = null;
+
+          return true;
+        }
+
         a.onmousemove = (onmousemove) => {
           // Курсор сдвинут более чем на 15 пикселей?
-          if (Math.abs(onmousedown.pageX - onmousemove.pageX) > 15 || Math.abs(onmousedown.pageY - onmousemove.pageY) > 15) {
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
             // Запись иконки курсора
             a.style.cursor = 'grabbing';
 
-            // Запись события для возврата иконки курсора
-            a.onmouseup = fn => {
+            // Запись события для переноса узла
+            a.onclick = (onclick) => {
               // Удаление событий
-              a.onmouseup = a.onmousemove = null;
+              a.onclick = a.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
 
               // Удаление иконки курсора
               a.style.cursor = null;
-            }
 
-            a.onclick = (onclick) => { return false }
-          } else a.onclick = (onclick) => { return true }
+              return false;
+            }
+          } else {
+            // Запись события открытия описания
+            a.onclick = (onclick) => {
+              // Удаление событий
+              a.onclick = a.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
+
+              // Удаление иконки курсора
+              a.style.cursor = null;
+
+              return true;
+            };
+          }
         }
       };
 
@@ -1175,3 +1254,4 @@ document.dispatchEvent(
     detail: { graph }
   })
 );
+
