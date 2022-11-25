@@ -115,28 +115,6 @@ class graph {
       description.classList.add('description');
       if (typeof data.popup === 'string') description.title = data.popup;
 
-      /**
-       * Показать описание
-       */
-      function show() {
-        // Отображение описания
-        description.style.display = null;
-
-        // Расположение выше остальных узлов
-        article.style.zIndex = 1000;
-      }
-
-      /**
-       * Скрыть описание
-       */
-      function hide() {
-        // Скрытие описания
-        description.style.display = 'none';
-
-        // Удаление расположения выше других узлов
-        article.style.zIndex = null;
-      }
-
       // Запись блокировки открытия описания в случае, если был перемещён узел
       title.onmousedown = (onmousedown) => {
         // Запись открытия описания
@@ -248,6 +226,18 @@ class graph {
         article.appendChild(data.append);
       }
 
+      // Инициализация кнопки закрытия
+      const close = document.createElement('i');
+      close.classList.add('icon', 'close');
+      close.style.display = 'none';
+      close.title = 'Закрыть';
+
+      // Инициализация события закрытия окна описания
+      close.onclick = fn => { hide() };
+
+      // Запись в оболочку
+      article.appendChild(close);
+
       // Запись в документ
       operator.shell.appendChild(article);
 
@@ -259,6 +249,37 @@ class graph {
 
       // Сокрытие описания (выполняется после расчёта размера потому, что иначе размер будет недоступен)
       description.style.display = "none";
+
+      /**
+       * Показать описание
+       */
+      function show() {
+        // Отображение описания и кнопки закрытия описания
+        description.style.display = close.style.display = null;
+
+        // Сдвиг кнопки закрытия описания
+        close.style.top = close.style.right = -(((description.offsetWidth - article.offsetWidth) / 4) + description.offsetWidth / 8) + 'px';
+
+        // Размер кнопки закрытия описания
+        close.style.scale = 1.3;
+
+        // Прозрачность кнопки закрытия описания (плавное появление)
+        close.style.opacity = 1;
+
+        // Расположение выше остальных узлов
+        article.style.zIndex = close.style.zIndex = 1000;
+      }
+
+      /**
+       * Скрыть описание
+       */
+      function hide() {
+        // Скрытие описания и кнопки закрытия описания
+        description.style.display = close.style.display = 'none';
+
+        // Удаление всех изменённых аттрибутов
+        close.style.top = close.style.right = article.style.zIndex = close.style.zIndex = close.style.scale = close.style.opacity = null;
+      }
 
       // Запись в свойство
       this.#element = article;
