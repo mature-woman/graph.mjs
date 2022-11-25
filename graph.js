@@ -1,6 +1,6 @@
 import Victor from "https://cdn.skypack.dev/victor@1.1.0";
 
-("use strict");
+'use strict';
 
 /**
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
@@ -97,40 +97,152 @@ class graph {
       // Инициализация HTML-элемента узла
       const article = document.createElement("article");
       article.id = operator.nodes.size;
-      article.classList.add("node", "unselectable");
+      article.classList.add(data.color ?? 'white', "node", "unselectable");
       if (typeof data.href === "string") {
         article.href = data.href;
       }
 
-      // Инициализация заголовка-ссылки
-      const title = document.createElement("a");
-      title.innerText = data.title ?? data.link ?? "Неизвестно";
-      if (typeof data.link === "string") title.href = data.link;
+      // Инициализация заголовка
+      const title = document.createElement("h4");
+      title.classList.add('title');
+      title.innerText = data.title ?? null;
 
       // Запись в оболочку
       article.appendChild(title);
 
-      if (typeof data.description === "string") {
-        // Найдено описание узла
+      // Инициализация описания
+      const description = document.createElement("div");
+      description.classList.add('description');
+      description.title = data.popup ?? null;
 
-        // Инициализация заголовка
-        const description = document.createElement("p");
-        description.innerText = data.description;
-        description.style.display = "none";
-        article.setAttribute(
-          "onclick",
-          "const description = this.getElementsByTagName('p')[0]; description.style.display === 'none' ? description.style.display = null : description.style.display = 'none'"
-        );
+      /**
+       * Показать описание
+       */
+      function show() {
+        // Отображение описания
+        description.style.display = null;
 
-        // Запись в оболочку
-        article.appendChild(description);
+        // Расположение выше остальных узлов
+        article.style.zIndex = 1000;
+      }
+
+      /**
+       * Скрыть описание
+       */
+      function hide() {
+        // Скрытие описания
+        description.style.display = 'none';
+
+        // Удаление расположения выше других узлов
+        article.style.zIndex = null;
+      }
+
+      // Запись блокировки открытия описания в случае, если был перемещён узел
+      title.onmousedown = (onmousedown) => {
+        // Запись открытия описания
+        title.onclick = (onclick) => { show() }
+
+        title.onmousemove = (onmousemove) => {
+          // Курсор сдвинут более чем на 15 пикселей?
+          if (Math.abs(onmousedown.pageX - onmousemove.pageX) > 15 || Math.abs(onmousedown.pageY - onmousemove.pageY) > 15) {
+            // Запись иконки курсора
+            title.style.cursor = 'grabbing';
+
+            // Запись события для возврата иконки курсора
+            title.onmouseup = fn => {
+              // Удаление событий
+              title.onmouseup = title.onmousemove = null;
+
+              // Удаление иконки курсора
+              title.style.cursor = null;
+            }
+
+            title.onclick = (onclick) => { return false }
+          } else title.onclick = (onclick) => { show() }
+        }
+      };
+
+
+      // Запись в оболочку
+      article.appendChild(description);
+
+      // Инициализация левой фигуры для обёртки текста
+      const left = document.createElement("span");
+      left.classList.add('left', 'wrapper');
+
+      // Запись в описание
+      description.appendChild(left);
+
+      // Инициализация правой фигуры для обёртки текста
+      const right = document.createElement("span");
+      right.classList.add('right', 'wrapper');
+
+      // Запись в описание
+      description.appendChild(right);
+
+      // Инициализация ссылки на источник
+      const a = document.createElement("a");
+      a.innerText = typeof data.link === 'object' && typeof data.link.name === 'string' ? data.link.name : null;
+      a.href = typeof data.link === 'object' && typeof data.link.href === 'string' ? data.link.href : null;
+      a.classList.add(...(typeof data.link === 'object' && typeof data.link.class === 'object' ? data.link.class : []));
+      a.title = typeof data.link === 'object' && typeof data.link.title === 'string' ? data.link.title : null;
+
+      // Блокировка событий браузера (чтобы не мешать переноса узла)
+      a.ondragstart = a.onselectstart = fn => { return false };
+
+      // Запись блокировки перехода по ссылке в случае, если был перемещён узел
+      a.onmousedown = (onmousedown) => {
+        a.onmousemove = (onmousemove) => {
+          // Курсор сдвинут более чем на 15 пикселей?
+          if (Math.abs(onmousedown.pageX - onmousemove.pageX) > 15 || Math.abs(onmousedown.pageY - onmousemove.pageY) > 15) {
+            // Запись иконки курсора
+            a.style.cursor = 'grabbing';
+
+            // Запись события для возврата иконки курсора
+            a.onmouseup = fn => {
+              // Удаление событий
+              a.onmouseup = a.onmousemove = null;
+
+              // Удаление иконки курсора
+              a.style.cursor = null;
+            }
+
+            a.onclick = (onclick) => { return false }
+          } else a.onclick = (onclick) => { return true }
+        }
+      };
+
+
+      // Запись в описание
+      description.appendChild(a);
+
+      // Запись текста в описание
+      const text = document.createElement("p");
+      text.innerText = data.description ?? null;
+
+      // Запись в оболочку
+      description.appendChild(text);
+
+      if (
+        typeof data.cover === "string"
+      ) {
+        // Получены другие HTML-элементы
+
+        // Инициализация левой фигуры для обёртки текста
+        const cover = document.createElement("img");
+        cover.src = data.cover;
+        cover.alt = data.title ?? null;
+        cover.classList.add('cover', 'unselectable');
+
+        // Запись в описание
+        description.appendChild(cover);
       }
 
       if (
         typeof data.append === "HTMLCollection" ||
         typeof data.append === "HTMLElement"
       ) {
-        // Найдены другие HTML-элементы узла
+        // Получены другие HTML-элементы
 
         // Запись в оболочку
         article.appendChild(data.append);
@@ -138,6 +250,15 @@ class graph {
 
       // Запись в документ
       operator.shell.appendChild(article);
+
+      // Запись диаметра описания в зависимости от размера заголовка (чтобы вмещался)
+      description.style.width = description.style.height = (a.offsetWidth === 0 ? 50 : a.offsetWidth) * 3 + 'px';
+
+      // Запись отступа заголовка (чтобы был по центру описания)
+      a.style.left = description.offsetWidth / 2 - a.offsetWidth / 2 + 'px';
+
+      // Сокрытие описания (выполняется после расчёта размера потому, что иначе размер будет недоступен)
+      description.style.display = "none";
 
       // Запись в свойство
       this.#element = article;
@@ -151,11 +272,11 @@ class graph {
       // Перемещение
       this.move(
         operator.shell.offsetWidth / 2 -
-          this.#diameter / 2 +
-          (0.5 - Math.random()) * 500,
+        this.#diameter / 2 +
+        (0.5 - Math.random()) * 500,
         operator.shell.offsetHeight / 2 -
-          this.#diameter / 2 +
-          (0.5 - Math.random()) * 500,
+        this.#diameter / 2 +
+        (0.5 - Math.random()) * 500,
         true,
         true,
         true
@@ -173,6 +294,14 @@ class graph {
       // Инициализация размера HTML-элемента
       this.element.style.width = this.element.style.height =
         this.#diameter + "px";
+
+      // Инициализация описания
+      const description = this.element.getElementsByClassName('description')[0];
+
+      // Запись отступа описания (чтобы был по центру узла)
+      description.style.display = null;
+      description.style.marginLeft = description.style.marginTop = (this.element.offsetWidth - description.offsetWidth) / 2 + 'px';
+      description.style.display = 'none';
 
       // Инициализация ссылки на ядро
       const _this = this;
@@ -501,10 +630,10 @@ class graph {
           if (
             !node.actions.pushing ||
             between.length() >
-              (node.diameter + _this.diameter) / 2 +
-                distance +
-                increase +
-                (typeof add === "number" ? add : 0) ||
+            (node.diameter + _this.diameter) / 2 +
+            distance +
+            increase +
+            (typeof add === "number" ? add : 0) ||
             --iterations <= 0
           )
             return;
@@ -539,10 +668,10 @@ class graph {
           if (
             node.actions.pushing &&
             between.length() <=
-              (node.diameter + _this.diameter) / 2 +
-                distance +
-                increase +
-                (typeof add === "number" ? add : 0)
+            (node.diameter + _this.diameter) / 2 +
+            distance +
+            increase +
+            (typeof add === "number" ? add : 0)
           )
             setTimeout(move, between.length() / 100);
         }
@@ -632,10 +761,10 @@ class graph {
           if (
             !node.actions.pulling ||
             between.length() <=
-              (node.diameter + _this.diameter) / 2 +
-                distance +
-                increase +
-                (typeof add === "number" ? add : 0) ||
+            (node.diameter + _this.diameter) / 2 +
+            distance +
+            increase +
+            (typeof add === "number" ? add : 0) ||
             --iterations <= 0
           )
             return;
@@ -669,10 +798,10 @@ class graph {
           if (
             node.actions.pulling &&
             between.length() >
-              (node.diameter + _this.diameter) / 2 +
-                distance +
-                increase +
-                (typeof add === "number" ? add : 0)
+            (node.diameter + _this.diameter) / 2 +
+            distance +
+            increase +
+            (typeof add === "number" ? add : 0)
           )
             return setTimeout(
               move,
@@ -715,8 +844,8 @@ class graph {
             ? value === "true"
               ? true
               : value === "false"
-              ? false
-              : value
+                ? false
+                : value
             : buffer;
         }
       }
@@ -790,22 +919,22 @@ class graph {
       line.setAttribute(
         "x1",
         (isNaN((buffer = parseInt(from.element.style.left))) ? 0 : buffer) +
-          from.element.offsetWidth / 2
+        from.element.offsetWidth / 2
       );
       line.setAttribute(
         "y1",
         (isNaN((buffer = parseInt(from.element.style.top))) ? 0 : buffer) +
-          from.element.offsetHeight / 2
+        from.element.offsetHeight / 2
       );
       line.setAttribute(
         "x2",
         (isNaN((buffer = parseInt(to.element.style.left))) ? 0 : buffer) +
-          to.element.offsetWidth / 2
+        to.element.offsetWidth / 2
       );
       line.setAttribute(
         "y2",
         (isNaN((buffer = parseInt(to.element.style.top))) ? 0 : buffer) +
-          to.element.offsetHeight / 2
+        to.element.offsetHeight / 2
       );
       line.setAttribute("stroke", "grey");
       line.setAttribute("stroke-width", "8px");
@@ -851,14 +980,14 @@ class graph {
       this.element.children[0].setAttribute(
         x,
         (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
-          node.element.offsetWidth / 2
+        node.element.offsetWidth / 2
       );
 
       // Запись отступа (координаты по вертикали)
       this.element.children[0].setAttribute(
         y,
         (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
-          node.element.offsetHeight / 2
+        node.element.offsetHeight / 2
       );
     }
   };
@@ -911,7 +1040,7 @@ class graph {
         };
       };
 
-      // Перещапись событий браузера (чтобы не дёргалось)
+      // Блокировка событий браузера (чтобы не дёргалось)
       _this.shell.ondragstart = null;
     }
   }
@@ -943,7 +1072,7 @@ class graph {
           // Начало переноса
 
           // Позиционирование над остальными узлами
-          node.element.style.zIndex = 550;
+          node.element.style.zIndex = 5000;
 
           if (!_this.#camera) {
             // Запрещено двигать камеру (оболочку)
@@ -960,9 +1089,9 @@ class graph {
               // Перемещение
               node.move(
                 onmousemove.pageX -
-                  (onmousedown.pageX - n.left + s.left + pageXOffset),
+                (onmousedown.pageX - n.left + s.left + pageXOffset),
                 onmousemove.pageY -
-                  (onmousedown.pageY - n.top + s.top + pageYOffset),
+                (onmousedown.pageY - n.top + s.top + pageYOffset),
                 true,
                 true,
                 true
@@ -983,7 +1112,7 @@ class graph {
             node.actions.collision = node.actions.pushing = node.actions.pulling = true;
 
             // Позиционирование вместе остальными узлами
-            node.element.style.zIndex = 500;
+            node.element.style.zIndex = null;
           };
         };
 
