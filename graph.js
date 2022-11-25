@@ -105,7 +105,7 @@ class graph {
       // Инициализация заголовка
       const title = document.createElement("h4");
       title.classList.add('title');
-      title.innerText = data.title ?? null;
+      title.innerText = data.title ?? '';
 
       // Запись в оболочку
       article.appendChild(title);
@@ -113,7 +113,7 @@ class graph {
       // Инициализация описания
       const description = document.createElement("div");
       description.classList.add('description');
-      description.title = data.popup ?? null;
+      if (typeof data.popup === 'string') description.title = data.popup;
 
       /**
        * Показать описание
@@ -182,10 +182,10 @@ class graph {
 
       // Инициализация ссылки на источник
       const a = document.createElement("a");
-      a.innerText = typeof data.link === 'object' && typeof data.link.name === 'string' ? data.link.name : null;
-      a.href = typeof data.link === 'object' && typeof data.link.href === 'string' ? data.link.href : null;
-      a.classList.add(...(typeof data.link === 'object' && typeof data.link.class === 'object' ? data.link.class : []));
-      a.title = typeof data.link === 'object' && typeof data.link.title === 'string' ? data.link.title : null;
+      if (typeof data.link === 'object' && typeof data.link.name === 'string') a.innerText = data.link.name;
+      if (typeof data.link === 'object' && typeof data.link.href === 'string') a.href = data.link.href;
+      if (typeof data.link === 'object' && typeof data.link.class === 'object') a.classList.add(...data.link.class);
+      if (typeof data.link === 'object' && typeof data.link.title === 'string') a.title = data.link.title;
 
       // Блокировка событий браузера (чтобы не мешать переноса узла)
       a.ondragstart = a.onselectstart = fn => { return false };
@@ -218,7 +218,7 @@ class graph {
 
       // Запись текста в описание
       const text = document.createElement("p");
-      text.innerText = data.description ?? null;
+      if (typeof data.description === 'string') text.innerText = data.description;
 
       // Запись в оболочку
       description.appendChild(text);
@@ -226,12 +226,12 @@ class graph {
       if (
         typeof data.cover === "string"
       ) {
-        // Получены другие HTML-элементы
+        // Получено изображение-обложка
 
-        // Инициализация левой фигуры для обёртки текста
+        // Инициализация изображения-обложки
         const cover = document.createElement("img");
-        cover.src = data.cover;
-        cover.alt = data.title ?? null;
+        if (typeof cover.src === 'string') cover.src = data.cover;
+        if (typeof cover.alt === 'string') cover.alt = data.title;
         cover.classList.add('cover', 'unselectable');
 
         // Запись в описание
