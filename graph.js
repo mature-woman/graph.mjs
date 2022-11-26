@@ -269,7 +269,6 @@ class graph {
         }
       };
 
-
       // Запись в описание
       description.appendChild(a);
 
@@ -310,8 +309,71 @@ class graph {
       close.classList.add('icon', 'close');
       close.style.display = 'none';
 
-      // Инициализация события закрытия окна описания
-      close.onclick = fn => { hide() };
+      // Запись блокировки закрытия в случае, если был перемещён узел
+      close.onmousedown = (onmousedown) => {
+        // Инициализация координат
+        let x = onmousedown.pageX;
+        let y = onmousedown.pageY;
+
+        // Запись события открытия описания
+        close.onclick = (onclick) => {
+          // Скрытие описания
+          hide();
+
+          // Удаление событий
+          close.onclick = close.onmousemove = null;
+
+          // Реинициализация координат
+          x = onclick.pageX;
+          y = onclick.pageY;
+
+          // Удаление иконки курсора
+          close.style.cursor = null;
+
+          return true;
+        }
+
+        close.onmousemove = (onmousemove) => {
+          // Курсор сдвинут более чем на 15 пикселей?
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
+            // Запись иконки курсора
+            close.style.cursor = 'grabbing';
+
+            // Запись события для переноса узла
+            close.onclick = (onclick) => {
+              // Удаление событий
+              close.onclick = close.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
+
+              // Удаление иконки курсора
+              close.style.cursor = null;
+
+              return false;
+            }
+          } else {
+            // Запись события открытия описания
+            close.onclick = (onclick) => {
+              // Скрытие описания
+              hide();
+
+              // Удаление событий
+              close.onclick = close.onmousemove = null;
+
+              // Реинициализация координат
+              x = onclick.pageX;
+              y = onclick.pageY;
+
+              // Удаление иконки курсора
+              close.style.cursor = null;
+
+              return true;
+            };
+          }
+        }
+      };
 
       // Запись в оболочку
       article.appendChild(close);
