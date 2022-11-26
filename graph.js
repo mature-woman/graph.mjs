@@ -309,7 +309,6 @@ class graph {
       const close = document.createElement('i');
       close.classList.add('icon', 'close');
       close.style.display = 'none';
-      close.title = 'Закрыть';
 
       // Инициализация события закрытия окна описания
       close.onclick = fn => { hide() };
@@ -1171,6 +1170,9 @@ class graph {
         node.element.onmousedown = function (onmousedown) {
           // Начало переноса
 
+          // Инициализация буфера позиционирования
+          const z = node.element.style.zIndex;
+
           // Позиционирование над остальными узлами
           node.element.style.zIndex = 5000;
 
@@ -1211,8 +1213,8 @@ class graph {
             // Запись обработки столкновений и отталкивания
             node.actions.collision = node.actions.pushing = node.actions.pulling = true;
 
-            // Позиционирование вместе остальными узлами
-            node.element.style.zIndex = null;
+            // Возвращение позиционирования
+            node.element.style.zIndex = z;
           };
         };
 
@@ -1254,4 +1256,3 @@ document.dispatchEvent(
     detail: { graph }
   })
 );
-
