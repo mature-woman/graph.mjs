@@ -102,6 +102,12 @@ class graph {
         article.href = data.href;
       }
 
+      // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
+      article.onmouseenter = fn => {
+        // Запись класса с анимацией
+        article.classList.add('animated');
+      };
+
       // Инициализация заголовка
       const title = document.createElement("h4");
       title.classList.add('title');
@@ -114,6 +120,12 @@ class graph {
       const description = document.createElement("div");
       description.classList.add('description');
       if (typeof data.popup === 'string') description.title = data.popup;
+
+      // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
+      description.onmouseenter = fn => {
+        // Запись класса с анимацией
+        description.classList.add('animated');
+      };
 
       // Запись блокировки открытия описания в случае, если был перемещён узел
       title.onmousedown = (onmousedown) => {
@@ -180,7 +192,6 @@ class graph {
           }
         }
       };
-
 
       // Запись в оболочку
       article.appendChild(description);
