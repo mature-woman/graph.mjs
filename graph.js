@@ -62,22 +62,35 @@ class graph {
     return this.#connections;
   }
 
+  // Статус активации функций взаимодействий узлов
+  actions = {
+    collision: false,
+    pushing: true,
+    pulling: true
+  }
+
   // Класс узла
   #node = class node {
     // Реестр входящих соединений
     #inputs = new Set();
+
+    // Прочитать реестр входящих соединений
     get inputs() {
       return this.#inputs;
     }
 
     // Реестр исходящих соединений
     #outputs = new Set();
+
+    // Прочитать реестр исходящих соединений
     get outputs() {
       return this.#outputs;
     }
 
     // Оператор
     #operator;
+
+    // Прочитать оператора
     get operator() {
       return this.#operator;
     }
@@ -100,47 +113,98 @@ class graph {
 
     // Наблюдатель
     #observer = null;
+
+    // Прочитать наблюдатель
     get observer() {
       return this.#observer;
     }
 
     // Реестр запрещённых к изменению параметров
     #block = new Set(['events']);
+
+    // Прочитать реестр запрещённых к изменению параметров
     get block() {
       return this.#block;
     }
 
     // Диаметр узла
     #diameter = 100;
+
+    // Прочитать диаметр узла
     get diameter() {
       return this.#diameter;
     }
 
     // Степень увеличения диаметра
     #increase = 0;
+
+    // Прочитать степень увеличения диаметра
     get increase() {
       return this.#increase;
     }
 
     // Величина степени увеличения диаметра
     #addition = 12;
+
+    // Прочитать величину степени увеличения диаметра
     get addition() {
       return this.#addition;
     }
 
-    // Счётчик итераций
+    // Величина степени увеличения притягивания и отталкивания
+    #shift = 0;
+
+    // Прочитать величину степени увеличения притягивания и отталкивания
+    get shift() {
+      return this.#shift;
+    }
+
+    // Глобальный счётчик итераций
     iteration = 0;
 
-    // Ограничение максимального количества итераций за вызов
+    // Ограничение максимального количества всех итераций
     limit = 3000;
 
-    // Обработка событий
+    /**
+     * Обработка событий
+     *
+     * max - максимум итераций в процессе
+     * current - текущая итерация в процессе
+     * flow - максимум итераций в потоке
+     */
     actions = {
-      collision: true,
-      pushing: true,
-      pulling: true
+      collision: {
+        max: 100,
+        current: 0,
+        flow: {
+          medium: 30,
+          hard: 300
+        }
+      },
+      pushing: {
+        max: 100,
+        current: 0,
+        flow: {
+          medium: 30,
+          hard: 300
+        }
+      },
+      pulling: {
+        max: 100,
+        current: 0,
+        flow: {
+          medium: 30,
+          hard: 300
+        }
+      }
     };
 
+    /**
+     * Конструктор узла
+     *
+     * @param {object} operator Инстанция оператора (графика)
+     * @param {object} data Данные для генерации
+     */
     constructor(operator, data) {
       // Запись в свойство
       this.#operator = operator;
@@ -492,6 +556,12 @@ class graph {
 
         // Расположение выше остальных узлов
         article.style.zIndex = close.style.zIndex = 1000;
+
+        // Инициализация сдвига отталкивания и притяжения соединённых узлов
+        _this.#shift = description.offsetWidth - article.offsetWidth;
+
+        // Обработка сдвига
+        _this.move(null, null, _this.#operator.actions.collision, _this.#operator.actions.pushing, _this.#operator.actions.pulling, true, true);
       }
 
       /**
@@ -508,6 +578,12 @@ class graph {
 
         // Удаление всех изменённых аттрибутов
         close.style.top = close.style.right = article.style.zIndex = close.style.zIndex = close.style.scale = close.style.opacity = null;
+
+        // Деинициализация сдвига отталкивания и притяжения соединённых узлов
+        _this.#shift = 0;
+
+        // Обработка сдвига
+        _this.move(null, null, _this.#operator.actions.collision, _this.#operator.actions.pushing, _this.#operator.actions.pulling, true, true);
       }
 
       // Запись в свойство
@@ -524,8 +600,9 @@ class graph {
         this.#operator.shell.offsetHeight / 2 -
         this.#diameter / 2 +
         (0.5 - Math.random()) * 500,
-        true,
-        true,
+        this.#operator.actions.collision,
+        this.#operator.actions.pushing,
+        this.#operator.actions.pulling,
         true
       );
     }
@@ -570,7 +647,25 @@ class graph {
       });
     }
 
-    move(x, y, collision = false, pushing = false, pulling = false) {
+    /**
+     * Переместить узел
+     *
+     * @param {*} x Координата X (относительно левого верхнего края)
+     * @param {*} y Координата Y (относительно левого верхнего края)
+     * @param {*} collision Активировать столкновение?
+     * @param {*} pushing Активировать отталкивание?
+     * @param {*} pulling Активировать притягивание?
+     * @param {*} reset Сбросить счётчик итераций для процесса?
+     * @param {*} hard Увеличить количество итераций для процесса?
+     */
+    move(x, y, collision = false, pushing = false, pulling = false, reset = false, hard = false) {
+      // Сброс счётчика итераций для процесса (реинициализация процесса)
+      if (reset) this.actions.collision.current = this.actions.pushing.current = this.actions.pulling.current = 0;
+
+      // Проверка входящих параметров
+      if (typeof x !== 'number') x = this.element.getAttribute('data-x') ?? 0;
+      if (typeof y !== 'number') y = this.element.getAttribute('data-y') ?? 0;
+
       // Запись отступов
       this.element.style.left = x + 'px';
       this.element.style.top = y + 'px';
@@ -586,7 +681,7 @@ class graph {
 
       // Обработка столкновений
       if (collision && !collision.has(this))
-        this.collision(this.#operator.nodes, collision);
+        this.collision(this.#operator.nodes, collision, hard);
 
       // Инициализация буфера реестра узлов
       const registry = new Set(this.#operator.nodes);
@@ -594,14 +689,11 @@ class graph {
       if (pushing && !pushing.has(this)) {
         // Активно отталкивание
 
-        // Инициализация счётчика циклов
-        let iterations = 50;
-
         for (const connection of this.inputs) {
           // Перебор входящих соединений
 
           // Ограничение выполнения
-          if (--iterations <= 0) break;
+          if (++this.actions.pushing.current >= this.actions.pushing.max) break;
 
           // Защита от повторной обработки
           if (pushing.has(connection.from)) continue;
@@ -610,17 +702,14 @@ class graph {
           registry.delete(connection.from);
 
           // Обработка отталкивания
-          this.pushing(new Set([connection.from]), pushing);
+          this.pushing(new Set([connection.from]), pushing, 0, hard);
         }
-
-        // Реинициализация счётчика циклов
-        iterations = 50;
 
         for (const connection of this.outputs) {
           // Перебор исходящих соединений
 
           // Ограничение выполнения
-          if (--iterations <= 0) break;
+          if (++this.actions.pushing.current >= this.actions.pushing.max) break;
 
           // Защита от повторной обработки
           if (pushing.has(connection.to)) continue;
@@ -629,21 +718,18 @@ class graph {
           registry.delete(connection.to);
 
           // Обработка отталкивания
-          this.pushing(new Set([connection.to]), pushing);
+          this.pushing(new Set([connection.to]), pushing, 0, hard);
         }
       }
 
       if (pulling && !pulling.has(this)) {
         // Активно притягивание
 
-        // Инициализация счётчика циклов
-        let iterations = 50;
-
         for (const connection of this.inputs) {
           // Перебор входящих соединений
 
           // Ограничение выполнения
-          if (--iterations <= 0) break;
+          if (++this.actions.pulling.current >= this.actions.pulling.max) break;
 
           // Защита от повторной обработки
           if (pulling.has(connection.from)) continue;
@@ -652,17 +738,14 @@ class graph {
           registry.delete(connection.from);
 
           // Обработка притягивания
-          this.pulling(new Set([connection.from]), pulling);
+          this.pulling(new Set([connection.from]), pulling, 0, hard);
         }
-
-        // Реинициализация счётчика циклов
-        iterations = 50;
 
         for (const connection of this.outputs) {
           // Перебор входящих соединений
 
           // Ограничение выполнения
-          if (--iterations <= 0) break;
+          if (++this.actions.pulling.current >= this.actions.pulling.max) break;
 
           // Защита от повторной обработки
           if (pulling.has(connection.to)) continue;
@@ -671,7 +754,7 @@ class graph {
           registry.delete(connection.to);
 
           // Обработка притягивания
-          this.pulling(new Set([connection.to]), pulling);
+          this.pulling(new Set([connection.to]), pulling, 0, hard);
         }
       }
 
@@ -685,7 +768,7 @@ class graph {
       for (const connection of this.inputs) connection.synchronize(this);
     }
 
-    collision(nodes, involved) {
+    collision(nodes, involved, hard = false) {
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
 
@@ -697,7 +780,7 @@ class graph {
         // Перебор узлов в реестре
 
         // Защита от повторной обработки узла
-        if (involved.has(node)) continue;
+        if (typeof involved === 'object' && involved.has(node)) continue;
 
         // Инициализация вектора между узлами
         let between;
@@ -705,8 +788,8 @@ class graph {
         // Инициализация ускорения
         let increase = 0;
 
-        // Инициализация максимального количества итераций
-        let iterations = 30;
+        // Инициализация счётчика итераций
+        let iterations = 0;
 
         do {
           // Произошла коллизия (границы кругов перекрылись)
@@ -753,11 +836,11 @@ class graph {
           // Реинициализация вектора между узлами
           between = new Victor(x1 - x2, y1 - y2);
 
-          // Узлы преодолели расстояние столкновения?
+          // Узлы преодолели расстояние столкновения? (ограничение выполнения)
           if (
-            !node.actions.collision ||
-            between.length() > node.diameter / 2 + this.diameter / 2 ||
-            --iterations <= 0
+            this.actions.collision.current >= this.actions.collision.max ||
+              between.length() > node.diameter / 2 + this.diameter / 2 ||
+              ++iterations > (hard ? this.actions.collision.flow.hard : this.actions.collision.flow.medium)
           )
             break;
 
@@ -771,11 +854,19 @@ class graph {
               )
             );
 
-          if (node.actions.collision) {
+          if (this.actions.collision.current < this.actions.collision.max) {
             // Активно столкновение узлов
 
+            // Запись значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами) в буферы
+            const _node_collision = node.actions.collision.current;
+            const _node_pushing = node.actions.pushing.current;
+            const _node_pulling = node.actions.pulling.current;
+            const _this_collision = this.actions.collision.current;
+            const _this_pushing = this.actions.pushing.current;
+            const _this_pulling = this.actions.pulling.current;
+
             // Запрещение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = this.actions.collision = this.actions.pushing = this.actions.pulling = false;
+            node.actions.collision.current = node.actions.pushing.current = node.actions.pulling.current = this.actions.collision.current = this.actions.pushing.current = this.actions.pulling.current = 0;
 
             // Запись узлов в реестр задействованных узлов
             involved.add(this);
@@ -783,19 +874,24 @@ class graph {
             // Перемещение узла
             node.move(vector.x, vector.y, involved, involved, involved);
 
-            // Разрешение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = this.actions.collision = this.actions.pushing = this.actions.pulling = true;
+            // Возвращение значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
+            node.actions.collision.current = _node_collision;
+            node.actions.pushing.current = _node_pushing;
+            node.actions.pulling.current = _node_pulling;
+            this.actions.collision.current = _this_collision;
+            this.actions.pushing.current = _this_pushing;
+            this.actions.pulling.current = _this_pulling;
           }
 
           // Проверка на столкновение узлов
         } while (
-          node.actions.collision &&
+          this.actions.collision.current < this.actions.collision.max &&
           between.length() <= node.diameter / 2 + this.diameter / 2
         );
       }
     }
 
-    pushing(nodes, involved, add) {
+    pushing(nodes = [], involved, add, hard = false) {
       if (++this.iteration >= this.limit) {
         // Превышено ограничение по числу итераций
 
@@ -823,13 +919,13 @@ class graph {
         // Перебор узлов в буфере реестра
 
         // Защита от повторной обработки узла
-        if (involved.has(node)) continue;
+        if (typeof involved === 'object' && involved.has(node)) continue;
 
         // Инициализация вектора между узлами
         let between;
 
-        // Инициализация максимального количества итераций
-        let iterations = 30;
+        // Инициализация счётчика итераций
+        let iterations = 0;
 
         function move() {
           if (++node.iteration >= node.limit) {
@@ -868,18 +964,19 @@ class graph {
 
           // Инициализация увеличения
           let increase =
-            (node.diameter + _this.diameter) /
+            _this.shift + node.shift +
+            (_this.diameter + node.diameter) /
             2 ** (_this.increase + node.increase);
 
           // Узлы преодолели расстояние отталкивания?
           if (
-            !node.actions.pushing ||
-            between.length() >
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0) ||
-            --iterations <= 0
+            _this.actions.pushing.current >= _this.actions.pushing.max ||
+              between.length() >
+              (node.diameter + _this.diameter) / 2 +
+              distance +
+              increase +
+              (typeof add === 'number' ? add : 0) ||
+              ++iterations > (hard ? _this.actions.pushing.flow.hard : _this.actions.pushing.flow.medium)
           )
             return;
 
@@ -893,11 +990,19 @@ class graph {
               )
             );
 
-          if (node.actions.pushing) {
+          if (_this.actions.pushing.current < _this.actions.pushing.max) {
             // Активно притягивание узла
 
+            // Запись значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами) в буферы
+            const _node_collision = node.actions.collision.current;
+            const _node_pushing = node.actions.pushing.current;
+            const _node_pulling = node.actions.pulling.current;
+            const _this_collision = _this.actions.collision.current;
+            const _this_pushing = _this.actions.pushing.current;
+            const _this_pulling = _this.actions.pulling.current;
+
             // Запрещение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = _this.actions.collision = _this.actions.pushing = _this.actions.pulling = false;
+            node.actions.collision.current = node.actions.pushing.current = node.actions.pulling.current = _this.actions.collision.current = _this.actions.pushing.current = _this.actions.pulling.current = 0;
 
             // Запись узлов в реестр задействованных узлов
             involved.add(_this);
@@ -905,13 +1010,18 @@ class graph {
             // Перемещение узла
             node.move(vector.x, vector.y, involved, involved, involved);
 
-            // Разрешение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = _this.actions.collision = _this.actions.pushing = _this.actions.pulling = true;
+            // Возвращение значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
+            node.actions.collision.current = _node_collision;
+            node.actions.pushing.current = _node_pushing;
+            node.actions.pulling.current = _node_pulling;
+            _this.actions.collision.current = _this_collision;
+            _this.actions.pushing.current = _this_pushing;
+            _this.actions.pulling.current = _this_pulling;
           }
 
           // Проверка расстояния
           if (
-            node.actions.pushing &&
+            _this.actions.pushing.current < _this.actions.pushing.max &&
             between.length() <=
             (node.diameter + _this.diameter) / 2 +
             distance +
@@ -922,11 +1032,11 @@ class graph {
         }
 
         // Повторная обработка (вход в рекурсию)
-        if (node.actions.pushing) move();
+        if (_this.actions.pushing.current < _this.actions.pushing.max) move();
       }
     }
 
-    pulling(nodes, involved, add) {
+    pulling(nodes = [], involved, add, hard = false) {
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
 
@@ -936,7 +1046,7 @@ class graph {
       // Инициализация ссылки на ядро
       const _this = this;
 
-      // Увеличение дистанции для проверки
+      // Увеличение дистанции для проверки !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       const distance = 150;
 
       // Обработка притягивания узлов
@@ -944,13 +1054,13 @@ class graph {
         // Перебор узлов в буфере реестра
 
         // Защита от повторной обработки узла
-        if (involved.has(node)) continue;
+        if (typeof involved === 'object' && involved.has(node)) continue;
 
         // Инициализация вектора между узлами
         let between;
 
-        // Инициализация максимального количества итераций
-        let iterations = 30;
+        // Инициализация счётчика итераций
+        let iterations = 0;
 
         function move() {
           if (++_this.iteration >= _this.limit) {
@@ -999,18 +1109,19 @@ class graph {
 
           // Инициализация увеличения
           let increase =
+            _this.shift + node.shift +
             (node.diameter + _this.diameter) /
             2 ** (_this.increase + node.increase);
 
           // Узлы преодолели расстояние притягивания?
           if (
-            !node.actions.pulling ||
-            between.length() <=
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0) ||
-            --iterations <= 0
+            _this.actions.pulling.current >= _this.actions.pulling.max ||
+              between.length() <=
+              (node.diameter + _this.diameter) / 2 +
+              distance +
+              increase +
+              (typeof add === 'number' ? add : 0) ||
+              ++iterations > (hard ? _this.actions.pulling.flow.hard : _this.actions.pulling.flow.medium)
           )
             return;
 
@@ -1024,11 +1135,19 @@ class graph {
               )
             );
 
-          if (node.actions.pulling) {
+          if (_this.actions.pulling.current < _this.actions.pulling.max) {
             // Активно притягивание узлов
 
+            // Запись значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами) в буферы
+            const _node_collision = node.actions.collision.current;
+            const _node_pushing = node.actions.pushing.current;
+            const _node_pulling = node.actions.pulling.current;
+            const _this_collision = _this.actions.collision.current;
+            const _this_pushing = _this.actions.pushing.current;
+            const _this_pulling = _this.actions.pulling.current;
+
             // Запрещение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = _this.actions.collision = _this.actions.pushing = _this.actions.pulling = false;
+            node.actions.collision.current = node.actions.pushing.current = node.actions.pulling.current = _this.actions.collision.current = _this.actions.pushing.current = _this.actions.pulling.current = 0;
 
             // Запись узлов в реестр задействованных узлов
             involved.add(_this);
@@ -1036,12 +1155,17 @@ class graph {
             // Перемещение узла
             node.move(vector.x, vector.y, involved, involved, involved);
 
-            // Разрешение столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
-            node.actions.collision = node.actions.pushing = node.actions.pulling = _this.actions.collision = _this.actions.pushing = _this.actions.pulling = true;
+            // Возвращение значений столкновения, притягивания и отталкивания целевого узла и обрабатываемого узла (другими узлами)
+            node.actions.collision.current = _node_collision;
+            node.actions.pushing.current = _node_pushing;
+            node.actions.pulling.current = _node_pulling;
+            _this.actions.collision.current = _this_collision;
+            _this.actions.pushing.current = _this_pushing;
+            _this.actions.pulling.current = _this_pulling;
           }
 
           if (
-            node.actions.pulling &&
+            _this.actions.pulling.current < _this.actions.pulling.max &&
             between.length() >
             (node.diameter + _this.diameter) / 2 +
             distance +
@@ -1055,7 +1179,7 @@ class graph {
         }
 
         // Повторная обработка (вход в рекурсию)
-        if (node.actions.pulling) move();
+        if (_this.actions.pulling.current < _this.actions.pulling.max) move();
       }
     }
 
@@ -1144,6 +1268,13 @@ class graph {
       return this.#operator;
     }
 
+    /**
+     * Конструктор соединения
+     *
+     * @param {object} operator Инстанция оператора (графика)
+     * @param {object} from Инстанция узла от которого идёт соединение
+     * @param {object} to Инстанция узла к которому идёт соединения
+     */
     constructor(operator, from, to) {
       // Запись свойства
       this.#operator = operator;
@@ -1269,6 +1400,13 @@ class graph {
   // Разрешено перемещать камеру? (svg-элементы-соединения - рёбра)
   #camera = true;
 
+  /**
+   * Конструктор графика
+   *
+   * @param {HTMLElement|string} shell HTML-элемент-оболочка для графика, либо его идентификатор
+   * @param {boolean} body Перенос работает на теле документа? (иначе на HTML-элементе-оболочке)
+   * @param {boolean} camera Активировать перемещение камеры?
+   */
   constructor(shell, body = true, camera = true) {
     // Запись оболочки
     if (shell instanceof HTMLElement) this.#shell = shell;
@@ -1379,6 +1517,7 @@ class graph {
       if (this.#move) {
         // Разрешено перемещать узлы
 
+        // Инициализация переноса узла
         node.element.onmousedown = function (onmousedown) {
           // Начало переноса
 
@@ -1387,6 +1526,9 @@ class graph {
 
           // Позиционирование над остальными узлами
           node.element.style.zIndex = 5000;
+
+          // Инициализация буферов значения количества столкновений, притягиваний и отталкиваний
+          let collision, pushing, pulling;
 
           if (!_this.#camera) {
             // Запрещено двигать камеру (оболочку)
@@ -1397,17 +1539,15 @@ class graph {
 
             // Инициализация функции переноса узла
             function move(onmousemove) {
-              // Запись обработки столкновений и отталкивания
-              node.actions.collision = node.actions.pushing = node.actions.pulling = false;
-
-              // Перемещение
+              // Перемещение узла
               node.move(
                 onmousemove.pageX -
-                (onmousedown.pageX - n.left + s.left + pageXOffset),
+                (onmousedown.pageX - n.left + s.left + scrollX),
                 onmousemove.pageY -
-                (onmousedown.pageY - n.top + s.top + pageYOffset),
-                true,
-                true,
+                (onmousedown.pageY - n.top + s.top + scrollY),
+                _this.actions.collision,
+                _this.actions.pushing,
+                _this.actions.pulling,
                 true
               );
             }
@@ -1421,9 +1561,6 @@ class graph {
             // Очистка обработчиков событий
             document.onmousemove = null;
             node.element.onmouseup = null;
-
-            // Запись обработки столкновений и отталкивания
-            node.actions.collision = node.actions.pushing = node.actions.pulling = true;
 
             // Возвращение позиционирования
             node.element.style.zIndex = z;
