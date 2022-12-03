@@ -97,7 +97,7 @@ class graph {
     }
 
     // Реестр запрещённых к изменению параметров
-    #block = new Set(["events"]);
+    #block = new Set(['events']);
     get block() {
       return this.#block;
     }
@@ -158,11 +158,11 @@ class graph {
       }
 
       // Инициализация HTML-элемента узла
-      const article = document.createElement("article");
+      const article = document.createElement('article');
       article.id = this.#operator.id + '_node_' + this.#operator.nodes.size;
       if (typeof data.color === 'string') article.classList.add(data.color);
       article.classList.add(..._this.operator.classes.node.element);
-      if (typeof data.href === "string") {
+      if (typeof data.href === 'string') {
         article.href = data.href;
       }
 
@@ -173,7 +173,7 @@ class graph {
       };
 
       // Инициализация заголовка
-      const title = document.createElement("h4");
+      const title = document.createElement('h4');
       title.classList.add(..._this.#operator.classes.node.title);
       title.innerText = data.title ?? '';
 
@@ -181,7 +181,7 @@ class graph {
       article.appendChild(title);
 
       // Инициализация описания
-      const description = document.createElement("div");
+      const description = document.createElement('div');
       description.classList.add(..._this.#operator.classes.node.description);
       if (typeof data.popup === 'string') description.title = data.popup;
 
@@ -261,21 +261,21 @@ class graph {
       article.appendChild(description);
 
       // Инициализация левой фигуры для обёртки текста
-      const left = document.createElement("span");
+      const left = document.createElement('span');
       left.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.left);
 
       // Запись в описание
       description.appendChild(left);
 
       // Инициализация правой фигуры для обёртки текста
-      const right = document.createElement("span");
+      const right = document.createElement('span');
       right.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.right);
 
       // Запись в описание
       description.appendChild(right);
 
       // Инициализация ссылки на источник
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       if (typeof data.link === 'object' && typeof data.link.name === 'string') a.innerText = data.link.name;
       if (typeof data.link === 'object' && typeof data.link.href === 'string') a.href = data.link.href;
       if (typeof data.link === 'object' && typeof data.link.class === 'object') a.classList.add(...data.link.class);
@@ -348,19 +348,19 @@ class graph {
       description.appendChild(a);
 
       // Запись текста в описание
-      const text = document.createElement("p");
+      const text = document.createElement('p');
       if (typeof data.description === 'string') text.innerText = data.description;
 
       // Запись в оболочку
       description.appendChild(text);
 
       if (
-        typeof data.cover === "string"
+        typeof data.cover === 'string'
       ) {
         // Получено изображение-обложка
 
         // Инициализация изображения-обложки
-        const cover = document.createElement("img");
+        const cover = document.createElement('img');
         if (typeof cover.src === 'string') cover.src = data.cover;
         if (typeof cover.alt === 'string') cover.alt = data.title;
         cover.classList.add(..._this.#operator.classes.node.cover);
@@ -370,8 +370,8 @@ class graph {
       }
 
       if (
-        typeof data.append === "HTMLCollection" ||
-        typeof data.append === "HTMLElement"
+        typeof data.append === 'HTMLCollection' ||
+        typeof data.append === 'HTMLElement'
       ) {
         // Получены другие HTML-элементы
 
@@ -463,7 +463,7 @@ class graph {
       a.style.left = description.offsetWidth / 2 - a.offsetWidth / 2 + 'px';
 
       // Сокрытие описания (выполняется после расчёта размера потому, что иначе размер будет недоступен)
-      description.style.display = "none";
+      description.style.display = 'none';
 
       /**
        * Показать описание
@@ -526,7 +526,7 @@ class graph {
 
       // Инициализация размера HTML-элемента
       this.element.style.width = this.element.style.height =
-        this.#diameter + "px";
+        this.#diameter + 'px';
 
       // Инициализация описания
       const description = this.element.getElementsByClassName('description')[0];
@@ -542,7 +542,7 @@ class graph {
       // Инициализация наблюдателя
       this.#observer = new MutationObserver(function (mutations) {
         for (const mutation of mutations) {
-          if (mutation.type === "attributes") {
+          if (mutation.type === 'attributes') {
             // Перехвачено изменение аттрибута
 
             // Запись параметра в инстанцию бегущей строки
@@ -560,12 +560,12 @@ class graph {
 
     move(x, y, collision = false, pushing = false, pulling = false) {
       // Запись отступов
-      this.element.style.left = x + "px";
-      this.element.style.top = y + "px";
+      this.element.style.left = x + 'px';
+      this.element.style.top = y + 'px';
 
       // Запись аттрибутов с координатами
-      this.element.setAttribute("data-graph-x", x);
-      this.element.setAttribute("data-graph-y", y);
+      this.element.setAttribute('data-x', x);
+      this.element.setAttribute('data-y', y);
 
       // Инициализация реестров узлов
       if (collision === true) collision = new Set();
@@ -866,7 +866,7 @@ class graph {
             (node.diameter + _this.diameter) / 2 +
             distance +
             increase +
-            (typeof add === "number" ? add : 0) ||
+            (typeof add === 'number' ? add : 0) ||
             --iterations <= 0
           )
             return;
@@ -904,7 +904,7 @@ class graph {
             (node.diameter + _this.diameter) / 2 +
             distance +
             increase +
-            (typeof add === "number" ? add : 0)
+            (typeof add === 'number' ? add : 0)
           )
             setTimeout(move, between.length() / 100);
         }
@@ -997,7 +997,7 @@ class graph {
             (node.diameter + _this.diameter) / 2 +
             distance +
             increase +
-            (typeof add === "number" ? add : 0) ||
+            (typeof add === 'number' ? add : 0) ||
             --iterations <= 0
           )
             return;
@@ -1034,7 +1034,7 @@ class graph {
             (node.diameter + _this.diameter) / 2 +
             distance +
             increase +
-            (typeof add === "number" ? add : 0)
+            (typeof add === 'number' ? add : 0)
           )
             return setTimeout(
               move,
@@ -1049,9 +1049,9 @@ class graph {
 
     configure(attribute) {
       // Инициализация названия параметра
-      const parameter = (/^data-graph-(\w+)$/.exec(attribute) ?? [, null])[1];
+      const parameter = (/^data-(\w+)$/.exec(attribute) ?? [, null])[1];
 
-      if (typeof parameter === "string") {
+      if (typeof parameter === 'string') {
         // Параметр найден
 
         // Проверка на разрешение изменения
@@ -1064,19 +1064,19 @@ class graph {
           // Найдено значение
 
           // Запрошено изменение координаты: x
-          if (parameter === "x") this.element.style.left = value + "px";
+          if (parameter === 'x') this.element.style.left = value + 'px';
 
           // Запрошено изменение координаты: y
-          if (parameter === "y") this.element.style.top = value + "px";
+          if (parameter === 'y') this.element.style.top = value + 'px';
 
           // Инициализация буфера для временных данных
           let buffer;
 
           // Запись параметра
           this[parameter] = isNaN((buffer = parseFloat(value)))
-            ? value === "true"
+            ? value === 'true'
               ? true
-              : value === "false"
+              : value === 'false'
                 ? false
                 : value
             : buffer;
@@ -1148,7 +1148,7 @@ class graph {
         // Не найден HTML-элемент-оболочки соединений
 
         // Инициализация HTML-элемента-оболочки соединений
-        const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const shell = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         shell.id = this.#operator.id + '_connections';
         shell.classList.add(...this.#operator.classes.connection.shell);
 
@@ -1164,35 +1164,35 @@ class graph {
 
       // Инициализация оболочки
       const line = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "line"
+        'http://www.w3.org/2000/svg',
+        'line'
       );
       line.setAttribute(
-        "x1",
+        'x1',
         (isNaN((buffer = parseInt(from.element.style.left))) ? 0 : buffer) +
         from.element.offsetWidth / 2
       );
       line.setAttribute(
-        "y1",
+        'y1',
         (isNaN((buffer = parseInt(from.element.style.top))) ? 0 : buffer) +
         from.element.offsetHeight / 2
       );
       line.setAttribute(
-        "x2",
+        'x2',
         (isNaN((buffer = parseInt(to.element.style.left))) ? 0 : buffer) +
         to.element.offsetWidth / 2
       );
       line.setAttribute(
-        "y2",
+        'y2',
         (isNaN((buffer = parseInt(to.element.style.top))) ? 0 : buffer) +
         to.element.offsetHeight / 2
       );
-      line.setAttribute("stroke", "grey");
-      line.setAttribute("stroke-width", "8px");
+      line.setAttribute('stroke', 'grey');
+      line.setAttribute('stroke-width', '8px');
       line.id = this.#operator.id + '_connection_' + operator.connections.size;
       line.classList.add(...this.operator.classes.connection.element);
-      line.setAttribute("data-from", from.element.id);
-      line.setAttribute("data-to", to.element.id);
+      line.setAttribute('data-from', from.element.id);
+      line.setAttribute('data-to', to.element.id);
 
       // Запись в оболочку
       this.shell.append(line);
@@ -1208,8 +1208,8 @@ class graph {
      */
     synchronize(node) {
       // Инициализация названий аттрибутов
-      let x = "x",
-        y = "y";
+      let x = 'x',
+        y = 'y';
 
       if (node === this.from) {
         // Исходящее соединение
@@ -1231,6 +1231,7 @@ class graph {
       // Запись отступа (координаты по горизонтали)
       this.element.setAttribute(
         x,
+        -this.#shell.getAttribute('data-x') +
         (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
         node.element.offsetWidth / 2
       );
@@ -1238,6 +1239,7 @@ class graph {
       // Запись отступа (координаты по вертикали)
       this.element.setAttribute(
         y,
+        -this.#shell.getAttribute('data-y') +
         (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
         node.element.offsetHeight / 2
       );
@@ -1288,26 +1290,39 @@ class graph {
           const x = onmousedown.pageX - coords.left + scrollX;
           const y = onmousedown.pageY - coords.top + scrollY;
 
-          // Инициализация буфера высчитанных отступов полотна
-          let _x, _y;
+          // Инициализация HTML-элемента-оболочки соединений
+          const connections = document.getElementById(_this.#id + '_connections');
 
           // Инициализация функции переноса полотна
           function move(onmousemove) {
-            // Запись нового отступа от лева
-            _this.shell.style.left = (_x = onmousemove.pageX - x) + "px";
+            // Инициализация буфера
+            let buffer;
 
-            // Запись нового отступа от верха
-            _this.shell.style.top = (_y = onmousemove.pageY - y) + "px";
+            // Запись нового отступа от лева для HTML-элемента оболочки графика
+            _this.shell.style.left = (buffer = onmousemove.pageX - x) + 'px';
 
-            // for (const connection of _this.#connections) {
-            //   // Перебор всех HTML-элементов-соединений
+            // Запись нового отступа от лева для HTML-элемента оболочки соединений
+            connections.style.left = -buffer + 'px';
 
-            //   // Запись нового отступа от лева
-            //   connection.element.style.left = -_x + "px";
+            // Запись аттрибута с координатами для HTML-элемента оболочки соединений
+            connections.setAttribute('data-x', -buffer);
 
-            //   // Запись нового отступа от верха
-            //   connection.element.style.top = -_y + "px";
-            // }
+            // Запись нового отступа от верха для HTML-элемента оболочки графика
+            _this.shell.style.top = (buffer = onmousemove.pageY - y) + 'px';
+
+            // Запись нового отступа от верха для HTML-элемента оболочки соединений
+            connections.style.top = -buffer + 'px';
+
+            // Запись аттрибута с координатами для HTML-элемента оболочки соединений
+            connections.setAttribute('data-y', -buffer);
+
+            for (const connection of _this.connections) {
+              // Перебор соединений
+
+              // Синхронизация
+              connection.synchronize(connection.from);
+              connection.synchronize(connection.to);
+            }
           }
 
           // Запись слушателя события: "перенос полотна"
@@ -1330,7 +1345,7 @@ class graph {
   }
 
   write = function (data = {}) {
-    if (typeof data === "object") {
+    if (typeof data === 'object') {
       // Получен обязательный входной параметр в правильном типе
 
       // Инициализация узла
@@ -1437,7 +1452,7 @@ class graph {
 }
 
 document.dispatchEvent(
-  new CustomEvent("graph.loaded", {
+  new CustomEvent('graph.loaded', {
     detail: { graph }
   })
 );
