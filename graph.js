@@ -21,14 +21,22 @@ class graph {
       element: ['node'],
       onmouseenter: ['onmouseenter'],
       title: ['title'],
-      description: ['description'],
+      cover: ['cover'],
+      description: {
+        both: ['description'],
+        hidden: ['hidden'],
+        shown: ['shown']
+      },
+      close: {
+        both: ['close'],
+        hidden: ['hidden'],
+        shown: ['shown']
+      },
       wrappers: {
         both: ['wrapper'],
         left: ['left'],
         right: ['right']
-      },
-      cover: ['cover'],
-      close: ['close']
+      }
     },
     connection: {
       shell: ['connections'],
@@ -182,7 +190,7 @@ class graph {
 
       // Инициализация описания
       const description = document.createElement('div');
-      description.classList.add(..._this.#operator.classes.node.description);
+      description.classList.add(..._this.#operator.classes.node.description.both, ..._this.#operator.classes.node.description.hidden);
       if (typeof data.popup === 'string') description.title = data.popup;
 
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
@@ -381,8 +389,7 @@ class graph {
 
       // Инициализация кнопки закрытия
       const close = document.createElement('i');
-      close.classList.add(..._this.#operator.classes.node.close);
-      close.style.display = 'none';
+      close.classList.add(..._this.#operator.classes.node.close.both, ..._this.#operator.classes.node.close.hidden);
 
       // Запись блокировки закрытия в случае, если был перемещён узел
       close.onmousedown = (onmousedown) => {
@@ -462,15 +469,17 @@ class graph {
       // Запись отступа заголовка (чтобы был по центру описания)
       a.style.left = description.offsetWidth / 2 - a.offsetWidth / 2 + 'px';
 
-      // Сокрытие описания (выполняется после расчёта размера потому, что иначе размер будет недоступен)
-      description.style.display = 'none';
-
       /**
        * Показать описание
        */
-      this.show = () => {
-        // Отображение описания и кнопки закрытия описания
-        description.style.display = close.style.display = null;
+      this.show = fn => {
+        // Отображение описания
+        description.classList.add(..._this.#operator.classes.node.description.shown);
+        description.classList.remove(..._this.#operator.classes.node.description.hidden);
+
+        // Отображение кнопки закрытия
+        close.classList.add(..._this.#operator.classes.node.close.shown);
+        close.classList.remove(..._this.#operator.classes.node.close.hidden);
 
         // Сдвиг кнопки закрытия описания
         close.style.top = close.style.right = -(((description.offsetWidth - article.offsetWidth) / 4) + description.offsetWidth / 8) + 'px';
@@ -488,9 +497,14 @@ class graph {
       /**
        * Скрыть описание
        */
-      this.hide = () => {
-        // Скрытие описания и кнопки закрытия описания
-        description.style.display = close.style.display = 'none';
+      this.hide = fn => {
+        // Скрытие описания
+        description.classList.add(..._this.#operator.classes.node.description.hidden);
+        description.classList.remove(..._this.#operator.classes.node.description.shown);
+
+        // Скрытие кнопки закрытия
+        close.classList.add(..._this.#operator.classes.node.close.hidden);
+        close.classList.remove(..._this.#operator.classes.node.close.shown);
 
         // Удаление всех изменённых аттрибутов
         close.style.top = close.style.right = article.style.zIndex = close.style.zIndex = close.style.scale = close.style.opacity = null;
@@ -532,9 +546,7 @@ class graph {
       const description = this.element.getElementsByClassName('description')[0];
 
       // Запись отступа описания (чтобы был по центру узла)
-      description.style.display = null;
       description.style.marginLeft = description.style.marginTop = (this.element.offsetWidth - description.offsetWidth) / 2 + 'px';
-      description.style.display = 'none';
 
       // Инициализация ссылки на ядро
       const _this = this;
