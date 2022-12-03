@@ -160,7 +160,8 @@ class graph {
       // Инициализация HTML-элемента узла
       const article = document.createElement("article");
       article.id = this.#operator.id + '_node_' + this.#operator.nodes.size;
-      article.classList.add(data.color ?? null, ..._this.operator.classes.node.element);
+      if (typeof data.color === 'string') article.classList.add(data.color);
+      article.classList.add(..._this.operator.classes.node.element);
       if (typeof data.href === "string") {
         article.href = data.href;
       }
@@ -181,7 +182,7 @@ class graph {
 
       // Инициализация описания
       const description = document.createElement("div");
-      description.classList.add(..._this.#operator.classes.node.title.description);
+      description.classList.add(..._this.#operator.classes.node.description);
       if (typeof data.popup === 'string') description.title = data.popup;
 
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
