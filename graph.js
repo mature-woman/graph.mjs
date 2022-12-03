@@ -6,8 +6,38 @@ import Victor from "https://cdn.skypack.dev/victor@1.1.0";
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
  */
 class graph {
+  // Идентификатор HTML-элемента-оболочки (instanceof HTMLElement)
+  #id = 'graph';
+
+  // Прочитать идентификатор HTML-элемента-оболочки (instanceof HTMLElement)
+  get id() {
+    return this.#id;
+  }
+
+  // Классы которые будут записаны в HTML-элементы
+  classes = {
+    node: {
+      shell: ['nodes'],
+      element: ['node'],
+      onmouseenter: ['onmouseenter'],
+      title: ['title'],
+      description: ['description'],
+      wrappers: {
+        both: ['wrapper'],
+        left: ['left'],
+        right: ['right']
+      },
+      cover: ['cover'],
+      close: ['close']
+    },
+    connection: {
+      shell: ['connections'],
+      element: ['connection']
+    }
+  };
+
   // Оболочка (instanceof HTMLElement)
-  #shell = document.getElementById("graph");
+  #shell = document.getElementById(this.id);
   get shell() {
     return this.#shell;
   }
@@ -44,8 +74,18 @@ class graph {
       return this.#operator;
     }
 
+    // HTML-элемент-оболочка
+    #shell;
+
+    // Прочитать HTML-элемент-оболочка
+    get shell() {
+      return this.#shell;
+    }
+
     // HTML-элемент
     #element;
+
+    // Прочитать HTML-элемент
     get element() {
       return this.#element;
     }
@@ -94,10 +134,33 @@ class graph {
     };
 
     constructor(operator, data) {
+      // Запись в свойство
+      this.#operator = operator;
+
+      // Инициализация ссылки на ядро
+      const _this = this;
+
+      // Инициализация HTML-элемента-оболочки узлов
+      if ((this.#shell = document.getElementById(this.#operator.id + '_nodes')) instanceof HTMLElement);
+      else {
+        // Не найден HTML-элемент-оболочки узлов
+
+        // Инициализация HTML-элемента-оболочки узлов
+        const shell = document.createElement('section');
+        shell.id = this.#operator.id + '_nodes';
+        shell.classList.add(...this.#operator.classes.node.shell);
+
+        // Запись в документ
+        this.#operator.shell.appendChild(shell);
+
+        // Запись в свойство
+        this.#shell = shell;
+      }
+
       // Инициализация HTML-элемента узла
       const article = document.createElement("article");
-      article.id = operator.nodes.size;
-      article.classList.add(data.color ?? 'white', "node", "unselectable");
+      article.id = this.#operator.id + '_node_' + this.#operator.nodes.size;
+      article.classList.add(data.color ?? null, ..._this.operator.classes.node.element);
       if (typeof data.href === "string") {
         article.href = data.href;
       }
@@ -105,12 +168,12 @@ class graph {
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
       article.onmouseenter = fn => {
         // Запись класса с анимацией
-        article.classList.add('animated');
+        article.classList.add(..._this.#operator.classes.node.onmouseenter);
       };
 
       // Инициализация заголовка
       const title = document.createElement("h4");
-      title.classList.add('title');
+      title.classList.add(..._this.#operator.classes.node.title);
       title.innerText = data.title ?? '';
 
       // Запись в оболочку
@@ -118,13 +181,13 @@ class graph {
 
       // Инициализация описания
       const description = document.createElement("div");
-      description.classList.add('description');
+      description.classList.add(..._this.#operator.classes.node.title.description);
       if (typeof data.popup === 'string') description.title = data.popup;
 
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
       description.onmouseenter = fn => {
         // Запись класса с анимацией
-        description.classList.add('animated');
+        description.classList.add(..._this.#operator.classes.node.onmouseenter);
       };
 
       // Запись блокировки открытия описания в случае, если был перемещён узел
@@ -136,7 +199,7 @@ class graph {
         // Запись события открытия описания
         title.onclick = (onclick) => {
           // Отображение описания
-          show();
+          _this.show();
 
           // Удаление событий
           title.onclick = title.onmousemove = null;
@@ -175,7 +238,7 @@ class graph {
             // Запись события открытия описания
             title.onclick = (onclick) => {
               // Отображение описания
-              show();
+              _this.show();
 
               // Удаление событий
               title.onclick = title.onmousemove = null;
@@ -198,14 +261,14 @@ class graph {
 
       // Инициализация левой фигуры для обёртки текста
       const left = document.createElement("span");
-      left.classList.add('left', 'wrapper');
+      left.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.left);
 
       // Запись в описание
       description.appendChild(left);
 
       // Инициализация правой фигуры для обёртки текста
       const right = document.createElement("span");
-      right.classList.add('right', 'wrapper');
+      right.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.right);
 
       // Запись в описание
       description.appendChild(right);
@@ -299,7 +362,7 @@ class graph {
         const cover = document.createElement("img");
         if (typeof cover.src === 'string') cover.src = data.cover;
         if (typeof cover.alt === 'string') cover.alt = data.title;
-        cover.classList.add('cover', 'unselectable');
+        cover.classList.add(..._this.#operator.classes.node.cover);
 
         // Запись в описание
         description.appendChild(cover);
@@ -317,7 +380,7 @@ class graph {
 
       // Инициализация кнопки закрытия
       const close = document.createElement('i');
-      close.classList.add('icon', 'close');
+      close.classList.add(..._this.#operator.classes.node.close);
       close.style.display = 'none';
 
       // Запись блокировки закрытия в случае, если был перемещён узел
@@ -329,7 +392,7 @@ class graph {
         // Запись события открытия описания
         close.onclick = (onclick) => {
           // Скрытие описания
-          hide();
+          _this.hide();
 
           // Удаление событий
           close.onclick = close.onmousemove = null;
@@ -368,7 +431,7 @@ class graph {
             // Запись события открытия описания
             close.onclick = (onclick) => {
               // Скрытие описания
-              hide();
+              _this.hide();
 
               // Удаление событий
               close.onclick = close.onmousemove = null;
@@ -390,7 +453,7 @@ class graph {
       article.appendChild(close);
 
       // Запись в документ
-      operator.shell.appendChild(article);
+      this.#shell.appendChild(article);
 
       // Запись диаметра описания в зависимости от размера заголовка (чтобы вмещался)
       description.style.width = description.style.height = (a.offsetWidth === 0 ? 50 : a.offsetWidth) * 3 + 'px';
@@ -404,7 +467,7 @@ class graph {
       /**
        * Показать описание
        */
-      function show() {
+      this.show = () => {
         // Отображение описания и кнопки закрытия описания
         description.style.display = close.style.display = null;
 
@@ -424,7 +487,7 @@ class graph {
       /**
        * Скрыть описание
        */
-      function hide() {
+      this.hide = () => {
         // Скрытие описания и кнопки закрытия описания
         description.style.display = close.style.display = 'none';
 
@@ -435,18 +498,15 @@ class graph {
       // Запись в свойство
       this.#element = article;
 
-      // Запись в свойство
-      this.#operator = operator;
-
       // Инициализация
       this.init();
 
       // Перемещение
       this.move(
-        operator.shell.offsetWidth / 2 -
+        this.#operator.shell.offsetWidth / 2 -
         this.#diameter / 2 +
         (0.5 - Math.random()) * 500,
-        operator.shell.offsetHeight / 2 -
+        this.#operator.shell.offsetHeight / 2 -
         this.#diameter / 2 +
         (0.5 - Math.random()) * 500,
         true,
@@ -513,10 +573,10 @@ class graph {
 
       // Обработка столкновений
       if (collision && !collision.has(this))
-        this.collision(this.operator.nodes, collision);
+        this.collision(this.#operator.nodes, collision);
 
       // Инициализация буфера реестра узлов
-      const registry = new Set(this.operator.nodes);
+      const registry = new Set(this.#operator.nodes);
 
       if (pushing && !pushing.has(this)) {
         // Активно отталкивание
@@ -606,10 +666,10 @@ class graph {
       if (pushing) this.pushing(registry, pushing);
 
       // Синхронизация местоположения исходящих соединений
-      for (const connection of this.outputs) connection.sync(this);
+      for (const connection of this.outputs) connection.synchronize(this);
 
       // Синхронизация местоположения входящих соединений
-      for (const connection of this.inputs) connection.sync(this);
+      for (const connection of this.inputs) connection.synchronize(this);
     }
 
     collision(nodes, involved) {
@@ -1024,33 +1084,41 @@ class graph {
     }
   };
 
-  // Класс узла
+  // Прочитать класс узла
   get node() {
     return this.#node;
   }
 
   // Класс соединения
   #connection = class connection {
-    // HTML-элемент
+    // HTML-элемент-оболочка
+    #shell;
+
+    // Прочитать HTML-элемент-оболочку
+    get shell() {
+      return this.#shell;
+    }
+
+    // HTML-элемент соединения
     #element;
 
-    // HTML-элемент
+    // Прочитать HTML-элемент соединения
     get element() {
       return this.#element;
     }
 
-    // Инстанция node от которой начинается соединение
+    // Инстанция this.operator.node от которой начинается соединение
     #from;
 
-    // Инстанция node от которой начинается соединение
+    // Прочитать инстанцию this.operator.node от которой начинается соединение
     get from() {
       return this.#from;
     }
 
-    // Инстанция node на которой заканчивается соединение
+    // Инстанция this.operator.node на которой заканчивается соединение
     #to;
 
-    // Инстанция node на которой заканчивается соединение
+    // Прочитать инстанцию this.operator.node на которой заканчивается соединение
     get to() {
       return this.#to;
     }
@@ -1058,7 +1126,7 @@ class graph {
     // Оператор
     #operator;
 
-    // Оператор
+    // Прочитать оператора
     get operator() {
       return this.#operator;
     }
@@ -1073,12 +1141,22 @@ class graph {
       // Запись свойства
       this.#to = to;
 
-      // Инициализация оболочки
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.id = operator.connections.size;
-      svg.classList.add("connection");
-      svg.setAttribute("data-from", from.element.id);
-      svg.setAttribute("data-to", to.element.id);
+      // Инициализация HTML-элемента-оболочки соединений
+      if ((this.#shell = document.getElementById(this.#operator.id + '_connections')) instanceof SVGElement);
+      else {
+        // Не найден HTML-элемент-оболочки соединений
+
+        // Инициализация HTML-элемента-оболочки соединений
+        const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        shell.id = this.#operator.id + '_connections';
+        shell.classList.add(...this.#operator.classes.connection.shell);
+
+        // Запись в документ
+        this.#operator.shell.appendChild(shell);
+
+        // Запись в свойство
+        this.#shell = shell;
+      }
 
       // Инициализация универсального буфера
       let buffer;
@@ -1110,15 +1188,16 @@ class graph {
       );
       line.setAttribute("stroke", "grey");
       line.setAttribute("stroke-width", "8px");
-
-      // Запись свойства
-      this.#element = svg;
+      line.id = this.#operator.id + '_connection_' + operator.connections.size;
+      line.classList.add(...this.operator.classes.connection.element);
+      line.setAttribute("data-from", from.element.id);
+      line.setAttribute("data-to", to.element.id);
 
       // Запись в оболочку
-      svg.append(line);
+      this.shell.append(line);
 
-      // Запись в документ
-      operator.shell.appendChild(svg);
+      // Запись в свойство
+      this.#element = line;
     }
 
     /**
@@ -1126,7 +1205,7 @@ class graph {
      *
      * @param {node} node Инстанция узла (связанного с соединением)
      */
-    sync(node) {
+    synchronize(node) {
       // Инициализация названий аттрибутов
       let x = "x",
         y = "y";
@@ -1149,14 +1228,14 @@ class graph {
       let buffer;
 
       // Запись отступа (координаты по горизонтали)
-      this.element.children[0].setAttribute(
+      this.element.setAttribute(
         x,
         (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
         node.element.offsetWidth / 2
       );
 
       // Запись отступа (координаты по вертикали)
-      this.element.children[0].setAttribute(
+      this.element.setAttribute(
         y,
         (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
         node.element.offsetHeight / 2
@@ -1164,56 +1243,88 @@ class graph {
     }
   };
 
-  // Класс соединения
+  // Прочитать класс соединения
   get connection() {
     return this.#connection;
   }
 
+  // Разрешено перемещать узлы?
   #move = true;
+
+  // Разрешено перемещать камеру? (svg-элементы-соединения - рёбра)
   #camera = true;
 
-  constructor(shell, camera = true) {
+  constructor(shell, body = true, camera = true) {
     // Запись оболочки
     if (shell instanceof HTMLElement) this.#shell = shell;
+    else if (typeof shell === 'string') this.#shell = document.getElementById(shell);
+
+    // Проверка на инициализированность HTML-элемента-оболочки
+    if (typeof this.#shell === undefined) return false;
+
+    // Запись идентификатора
+    this.#id = this.#shell.id;
 
     // Инициализация ссылки на обрабатываемый объект
     const _this = this;
 
+    // Инициализация цели для переноса
+    const target = body ? document.body : shell;
+
     // Перемещение камеры
     if (camera === true) {
-      this.shell.onmousedown = function (e) {
+      target.onmousedown = function (onmousedown) {
         // Начало переноса
 
         if (_this.#camera) {
           // Разрешено двигать камеру (оболочку)
 
+          // Запись иконки курсора
+          target.style.cursor = 'move';
+
           // Инициализация координат
           const coords = _this.shell.getBoundingClientRect();
-          const x = e.pageX - coords.left + pageXOffset;
-          const y = e.pageY - coords.top + pageYOffset;
+          const x = onmousedown.pageX - coords.left + scrollX;
+          const y = onmousedown.pageY - coords.top + scrollY;
+
+          // Инициализация буфера высчитанных отступов полотна
+          let _x, _y;
 
           // Инициализация функции переноса полотна
           function move(onmousemove) {
             // Запись нового отступа от лева
-            _this.shell.style.left = onmousemove.pageX - x + "px";
+            _this.shell.style.left = (_x = onmousemove.pageX - x) + "px";
 
             // Запись нового отступа от верха
-            _this.shell.style.top = onmousemove.pageY - y + "px";
+            _this.shell.style.top = (_y = onmousemove.pageY - y) + "px";
+
+            // for (const connection of _this.#connections) {
+            //   // Перебор всех HTML-элементов-соединений
+
+            //   // Запись нового отступа от лева
+            //   connection.element.style.left = -_x + "px";
+
+            //   // Запись нового отступа от верха
+            //   connection.element.style.top = -_y + "px";
+            // }
           }
 
           // Запись слушателя события: "перенос полотна"
-          document.onmousemove = move;
+          target.onmousemove = move;
         }
 
         // Конец переноса
-        _this.shell.onmouseup = function () {
-          document.onmousemove = null;
-          _this.shell.onmouseup = null;
+        target.onmouseup = function () {
+          target.onmousemove = null;
+          target.onmouseup = null;
+
+          // Запись иконки курсора
+          target.style.cursor = null;
         };
       };
 
       // Блокировка событий браузера (чтобы не дёргалось)
-      _this.shell.ondragstart = null;
+      target.ondragstart = null;
     }
   }
 
