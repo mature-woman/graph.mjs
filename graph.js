@@ -681,9 +681,6 @@ class graph {
      * @param {*} hard Увеличить количество итераций для процесса?
      */
     move(x, y, hard = false) {
-      // console.log(this.element.id, this.pushings && !this.pushings.has(this), this.pullings && !this.pullings.has(this));
-      console.log(this.element.id, this.pushings, this.pullings);
-
       // Проверка входящих параметров
       if (typeof x !== 'number') x = this.element.getAttribute('data-x') ?? 0;
       else {
@@ -793,7 +790,7 @@ class graph {
 
     collision(nodes, hard = false) {
       // Проверка на превышение ограничения по числу итераций у целевого узла
-      if (++this.iteration >= this.limit) return this.iteration = 0;
+      if (++this.iteration >= this.limit) return (this.iteration = 0, false);
 
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
@@ -808,91 +805,141 @@ class graph {
         // Защита от повторной обработки узла
         if (typeof this.collisions === 'object' && this.collisions.has(node)) continue;
 
-        // Инициализация вектора между узлами
-        let between;
-
-        // Инициализация ускорения
-        let increase = 0;
-
         // Инициализация счётчика итераций
         let iterations = 0;
 
+        // Инициализация универсального буфера
+        let buffer;
+
         do {
-          // Произошла коллизия (границы кругов перекрылись)
+          // Произошла коллизия (границы кругов пересеклись)
 
           // Проверка на превышение ограничения по числу итераций у целевого узла
-          if (++this.iteration >= this.limit) return this.iteration = 0;
+          if (++this.iteration >= this.limit) break;
 
           // Проверка на превышение ограничения по числу итераций у обрабатываемого узла
-          if (++node.iteration >= node.limit) return node.iteration = 0;
-
-          // Инициализация универсального буфера
-          let buffer;
+          if (++node.iteration >= node.limit) break;
 
           // Инициализация координат целевого узла
-          let x1 =
-            (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
-            node.element.offsetWidth / 2;
-          let y1 =
-            (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
-            node.element.offsetHeight / 2;
+          const x1 = (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) + node.element.offsetWidth / 2;
+          const y1 = (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) + node.element.offsetHeight / 2;
 
           // Инициализация координат обрабатываемого узла
-          let x2 =
-            (isNaN((buffer = parseInt(this.element.style.left))) ? 0 : buffer) +
-            this.element.offsetWidth / 2;
-          let y2 =
-            (isNaN((buffer = parseInt(this.element.style.top))) ? 0 : buffer) +
-            this.element.offsetHeight / 2;
+          const x2 = (isNaN((buffer = parseInt(this.element.style.left))) ? 0 : buffer) + this.element.offsetWidth / 2;
+          const y2 = (isNaN((buffer = parseInt(this.element.style.top))) ? 0 : buffer) + this.element.offsetHeight / 2;
 
-          // Реинициализация вектора между узлами
-          between = new Victor(x1 - x2, y1 - y2);
+          // Инициализация вектора между узлами
+          const between = new Victor(x1 - x2, y1 - y2);
 
           // Узлы преодолели расстояние столкновения? (ограничение выполнения)
           if (
-            this.actions.collision.current >= this.actions.collision.max ||
             between.length() > node.diameter / 2 + this.diameter / 2 ||
             ++iterations > (hard ? this.actions.collision.flow.hard : this.actions.collision.flow.medium)
-          )
-            break;
+          ) break;
+
+          // Реинициализация реестра обработанных узлов и запись целевого узла
+          node.collisions = node.#operator.actions.collision ? new Set([this]) : null;
+
+          // Реинициализация счётчиков итераций
+          node.actions.collision.current = 0;
 
           // Инициализация координат вектора (узла с которым произошло столкновение)
           let vector = new Victor(x1, y1)
             .add(new Victor(between.x, between.y).norm().unfloat())
-            .subtract(
-              new Victor(
-                node.element.offsetWidth / 2,
-                node.element.offsetHeight / 2
-              )
-            );
+            .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
 
-          if (this.actions.collision.current < this.actions.collision.max) {
-            // Активно столкновение узлов
-
-            // Реинициализация реестра обработанных узлов и запись целевого узла
-            node.collisions = node.#operator.actions.collision ? new Set([_this]) : null;
-
-            // Реинициализация счётчиков итераций
-            node.actions.collision.current = 0;
-
-            // Запись целевого в реестр обработанных узлов в потоке
-            node.collisions.add(_this);
-
-            // Перемещение узла
-            node.move(vector.x, vector.y);
-          }
+          // Перемещение узла
+          node.move(vector.x, vector.y);
 
           // Проверка на столкновение узлов
         } while (
-          this.actions.collision.current < this.actions.collision.max &&
+          ++this.actions.collision.current < this.actions.collision.max &&
           between.length() <= node.diameter / 2 + this.diameter / 2
         );
       }
     }
 
-    pushing(nodes = [], add, hard = false) {
+    /**
+     * Обработать отталкивания
+     *
+     * @param {*} nodes
+     * @param {*} add
+     * @param {*} hard
+     * @param {*} distance
+     *
+     * @returns
+     */
+    pushing(nodes = [], add, hard = false, distance = 100) {
       // Проверка на превышение ограничения по числу итераций у целевого узла
-      if (++this.iteration >= this.limit) return this.iteration = 0;
+      if (++this.iteration >= this.limit) return (this.iteration = 0, false);
+
+      // Инициализация счётчика итераций
+      let iterations = 0;
+
+      // Инициализация универсального буфера
+      let buffer;
+
+      // Инициализация оператора
+      const operator = this;
+
+      /**
+       * Оттолкнуть
+       *
+       * @param {*} node
+       *
+       * @returns {boolean} Узлы преодолели расстояние отталкивания?
+       */
+      function move(node) {
+        // Защита от повторной обработки узла
+        if (typeof operator.pushings === 'object' && operator.pushings.has(node)) return false;
+
+        // Проверка на превышение ограничения по числу итераций у целевого узла
+        if (++operator.iteration >= operator.limit) return (operator.iteration = 0, false);
+
+        // Инициализация координат целевого узла
+        const x1 = (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) + node.element.offsetWidth / 2;
+        const y1 = (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) + node.element.offsetHeight / 2;
+
+        // Инициализация координат обрабатываемого узла
+        const x2 = (isNaN((buffer = parseInt(operator.element.style.left))) ? 0 : buffer) + operator.element.offsetWidth / 2;
+        const y2 = (isNaN((buffer = parseInt(operator.element.style.top))) ? 0 : buffer) + operator.element.offsetHeight / 2;
+
+        // Инициализация вектора между узлами
+        const between = new Victor(x1 - x2, y1 - y2);
+
+        // Инициализация увеличения
+        const increase =
+          operator.shift + node.shift +
+          (operator.diameter + node.diameter) /
+          2 ** (operator.increase + node.increase);
+
+        // Узлы преодолели расстояние отталкивания?
+        if (
+          between.length() >
+          (node.diameter + operator.diameter) / 2 +
+          distance +
+          increase +
+          (typeof add === 'number' ? add : 0) ||
+          ++iterations > (hard ? operator.actions.pushing.flow.hard : operator.actions.pushing.flow.medium)
+        ) return true;
+
+        // Реинициализация реестра обработанных узлов и запись целевого узла
+        node.pushings = node.#operator.actions.pushing ? new Set([operator]) : null;
+
+        // Реинициализация счётчиков итераций
+        node.actions.pushing.current = 0;
+
+        // Инициализация координат обрабатываемого узла (с которым произошло столкновение)
+        const vector = new Victor(x1, y1)
+          .add(new Victor(between.x, between.y).norm().unfloat())
+          .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
+
+        // Перемещение узла
+        node.move(vector.x, vector.y);
+
+        // Вход в рекурсию
+        setTimeout(move, between.length() / 100, node);
+      }
 
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
@@ -900,117 +947,91 @@ class graph {
       // Удаление текущего узла из буфера
       registry.delete(this);
 
-      // Инициализация ссылки на ядро
-      const _this = this;
-
-      // Увеличение дистанции для проверки
-      const distance = 100;
-
-      // Обработка отталкивания узлов
-      for (const node of registry) {
-        // Перебор узлов в буфере реестра
-
-        // Защита от повторной обработки узла
-        if (typeof this.pushings === 'object' && this.pushings.has(node)) continue;
-
-        // Инициализация вектора между узлами
-        let between;
-
-        // Инициализация счётчика итераций
-        let iterations = 0;
-
-        function move() {
-          // Проверка на превышение ограничения по числу итераций у целевого узла
-          if (++_this.iteration >= _this.limit) return _this.iteration = 0;
-
-          // Проверка на превышение ограничения по числу итераций у обрабатываемого узла
-          if (++node.iteration >= node.limit) return node.iteration = 0;
-
-          // Инициализация универсального буфера
-          let buffer;
-
-          // Инициализация координат целевого узла
-          let x1 =
-            (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
-            node.element.offsetWidth / 2;
-          let y1 =
-            (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
-            node.element.offsetHeight / 2;
-
-          // Инициализация координат обрабатываемого узла
-          let x2 =
-            (isNaN((buffer = parseInt(_this.element.style.left)))
-              ? 0
-              : buffer) +
-            _this.element.offsetWidth / 2;
-          let y2 =
-            (isNaN((buffer = parseInt(_this.element.style.top))) ? 0 : buffer) +
-            _this.element.offsetHeight / 2;
-
-          // Реинициализация вектора между узлами
-          between = new Victor(x1 - x2, y1 - y2);
-
-          // Инициализация увеличения
-          let increase =
-            _this.shift + node.shift +
-            (_this.diameter + node.diameter) /
-            2 ** (_this.increase + node.increase);
-
-          // Узлы преодолели расстояние отталкивания?
-          if (
-            _this.actions.pushing.current >= _this.actions.pushing.max ||
-            between.length() >
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0) ||
-            ++iterations > (hard ? _this.actions.pushing.flow.hard : _this.actions.pushing.flow.medium)
-          )
-            return;
-
-          // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new Victor(x1, y1)
-            .add(new Victor(between.x, between.y).norm().unfloat())
-            .subtract(
-              new Victor(
-                node.element.offsetWidth / 2,
-                node.element.offsetHeight / 2
-              )
-            );
-
-          if (_this.actions.pushing.current < _this.actions.pushing.max) {
-            // Активно притягивание узла
-
-            // Реинициализация реестра обработанных узлов и запись целевого узла
-            node.pushings = node.#operator.actions.pushing ? new Set([_this]) : null;
-
-            // Реинициализация счётчиков итераций
-            node.actions.pushing.current = 0;
-
-            // Перемещение узла
-            node.move(vector.x, vector.y);
-          }
-
-          // Проверка расстояния
-          if (
-            _this.actions.pushing.current < _this.actions.pushing.max &&
-            between.length() <=
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0)
-          )
-            return setTimeout(move, between.length() / 100);
-        }
-
-        // Повторная обработка (вход в рекурсию)
-        if (_this.actions.pushing.current < _this.actions.pushing.max) move();
-      }
+      // Обработка отталкивания
+      for (const node of registry) if (++this.actions.pushing.current < this.actions.pushing.max) move(node);
     }
 
-    pulling(nodes = [], add, hard = false) {
+    /**
+     * Обработать притягивания
+     *
+     * @param {*} nodes
+     * @param {*} add
+     * @param {*} hard
+     * @param {*} distance
+     *
+     * @returns
+     */
+    pulling(nodes = [], add, hard = false, distance = 150) {
       // Проверка на превышение ограничения по числу итераций у целевого узла
-      if (++this.iteration >= this.limit) return this.iteration = 0;
+      if (++this.iteration >= this.limit) return (this.iteration = 0, false);
+
+      // Инициализация счётчика итераций
+      let iterations = 0;
+
+      // Инициализация универсального буфера
+      let buffer;
+
+      // Инициализация ссылки на ядро
+      const operator = this;
+
+      /**
+       * Притянуть
+       *
+       * @param {*} node
+       *
+       * @returns {boolean} Узлы преодолели расстояние отталкивания?
+       */
+      function move(node) {
+        // Защита от повторной обработки узла
+        if (typeof operator.pullings === 'object' && operator.pullings.has(node)) return false;
+
+        // Проверка на превышение ограничения по числу итераций у целевого узла
+        if (++operator.iteration >= operator.limit) return (operator.iteration = 0, false);
+
+        // Инициализация координат целевого узла
+        const x1 = (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) + node.element.offsetWidth / 2;
+        const y1 = (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) + node.element.offsetHeight / 2;
+
+        // Инициализация координат обрабатываемого узла
+        const x2 = (isNaN((buffer = parseInt(operator.element.style.left))) ? 0 : buffer) + operator.element.offsetWidth / 2;
+        const y2 = (isNaN((buffer = parseInt(operator.element.style.top))) ? 0 : buffer) + operator.element.offsetHeight / 2;
+
+        // Инициализация вектора между узлами
+        const between = new Victor(x1 - x2, y1 - y2);
+
+        // Инициализация увеличения
+        const increase =
+          operator.shift + node.shift +
+          (operator.diameter + node.diameter) /
+          2 ** (operator.increase + node.increase);
+
+        // Узлы преодолели расстояние притягивания?
+        if (
+          between.length() <=
+          (node.diameter + operator.diameter) / 2 +
+          distance +
+          increase +
+          (typeof add === 'number' ? add : 0) ||
+          ++iterations > (hard ? operator.actions.pulling.flow.hard : operator.actions.pulling.flow.medium)
+        ) return true;
+
+        // Реинициализация реестра обработанных узлов и запись целевого узла
+        node.pullings = node.#operator.actions.pulling ? new Set([operator]) : null;
+
+        // Реинициализация счётчиков итераций
+        node.actions.pulling.current = 0;
+
+        // Инициализация координат обрабатываемого узла (с которым произошло столкновение)
+        const vector = new Victor(x1, y1)
+          .add(new Victor(between.x, between.y).norm().invert().unfloat())
+          .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
+
+        // Перемещение узла
+        node.move(vector.x, vector.y);
+
+        // Вход в рекурсию
+        setTimeout(move, between.length() / 10 - between.length() / 10, node);
+      }
 
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
@@ -1018,115 +1039,8 @@ class graph {
       // Удаление текущего узла из буфера
       registry.delete(this);
 
-      // Инициализация ссылки на ядро
-      const _this = this;
-
-      // Увеличение дистанции для проверки !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      const distance = 150;
-
-      // Обработка притягивания узлов
-      for (const node of registry) {
-        // Перебор узлов в буфере реестра
-
-        // Защита от повторной обработки узла
-        if (typeof this.pullings === 'object' && this.pullings.has(node)) continue;
-
-        // Инициализация вектора между узлами
-        let between;
-
-        // Инициализация счётчика итераций
-        let iterations = 0;
-
-        function move() {
-          // Проверка на превышение ограничения по числу итераций у целевого узла
-          if (++_this.iteration >= _this.limit) return _this.iteration = 0;
-
-          // Проверка на превышение ограничения по числу итераций у обрабатываемого узла
-          if (++node.iteration >= node.limit) return node.iteration = 0;
-
-          // Инициализация универсального буфера
-          let buffer;
-
-          // Инициализация координат целевого узла
-          let x1 =
-            (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) +
-            node.element.offsetWidth / 2;
-          let y1 =
-            (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) +
-            node.element.offsetHeight / 2;
-
-          // Инициализация координат обрабатываемого узла
-          let x2 =
-            (isNaN((buffer = parseInt(_this.element.style.left)))
-              ? 0
-              : buffer) +
-            _this.element.offsetWidth / 2;
-          let y2 =
-            (isNaN((buffer = parseInt(_this.element.style.top))) ? 0 : buffer) +
-            _this.element.offsetHeight / 2;
-
-          // Реинициализация вектора между узлами
-          between = new Victor(x1 - x2, y1 - y2);
-
-          // Инициализация увеличения
-          let increase =
-            _this.shift + node.shift +
-            (_this.diameter + node.diameter) /
-            2 ** (_this.increase + node.increase);
-
-          // Узлы преодолели расстояние притягивания?
-          if (
-            _this.actions.pulling.current >= _this.actions.pulling.max ||
-            between.length() <=
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0) ||
-            ++iterations > (hard ? _this.actions.pulling.flow.hard : _this.actions.pulling.flow.medium)
-          )
-            return;
-
-          // Инициализация координат вектора (узла с которым произошло столкновение)
-          let vector = new Victor(x1, y1)
-            .add(new Victor(between.x, between.y).norm().invert().unfloat())
-            .subtract(
-              new Victor(
-                node.element.offsetWidth / 2,
-                node.element.offsetHeight / 2
-              )
-            );
-
-          if (_this.actions.pulling.current < _this.actions.pulling.max) {
-            // Активно притягивание узлов
-
-            // Реинициализация реестра обработанных узлов и запись целевого узла
-            node.pullings = node.#operator.actions.pulling ? new Set([_this]) : null;
-
-            // Реинициализация счётчиков итераций
-            node.actions.pulling.current = 0;
-
-            // Перемещение узла
-            node.move(vector.x, vector.y);
-          }
-
-          // Проверка расстояния
-          if (
-            _this.actions.pulling.current < _this.actions.pulling.max &&
-            between.length() >
-            (node.diameter + _this.diameter) / 2 +
-            distance +
-            increase +
-            (typeof add === 'number' ? add : 0)
-          )
-            return setTimeout(
-              move,
-              between.length() / 10 - between.length() / 10
-            );
-        }
-
-        // Повторная обработка (вход в рекурсию)
-        if (_this.actions.pulling.current < _this.actions.pulling.max) move();
-      }
+      // Обработка отталкивания
+      for (const node of registry) if (++this.actions.pulling.current < this.actions.pulling.max) move(node);
     }
 
     configure(attribute) {
