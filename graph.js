@@ -36,7 +36,8 @@ class graph {
         both: ['wrapper'],
         left: ['left'],
         right: ['right']
-      }
+      },
+      animation: ['animation']
     },
     connection: {
       shell: ['connections'],
@@ -75,130 +76,93 @@ class graph {
     #inputs = new Set();
 
     // Прочитать реестр входящих соединений
-    get inputs() {
-      return this.#inputs;
-    }
+    get inputs() { return this.#inputs }
 
     // Реестр исходящих соединений
     #outputs = new Set();
 
     // Прочитать реестр исходящих соединений
-    get outputs() {
-      return this.#outputs;
-    }
+    get outputs() { return this.#outputs }
 
     // Оператор
     #operator;
 
     // Прочитать оператора
-    get operator() {
-      return this.#operator;
-    }
+    get operator() { return this.#operator }
 
     // HTML-элемент-оболочка
     #shell;
 
     // Прочитать HTML-элемент-оболочка
-    get shell() {
-      return this.#shell;
-    }
+    get shell() { return this.#shell }
 
     // HTML-элемент
     #element;
 
     // Прочитать HTML-элемент
-    get element() {
-      return this.#element;
-    }
+    get element() { return this.#element }
 
     // Наблюдатель
     #observer = null;
 
     // Прочитать наблюдатель
-    get observer() {
-      return this.#observer;
-    }
+    get observer() { return this.#observer }
 
     // Реестр запрещённых к изменению параметров
     #block = new Set(['events']);
 
     // Прочитать реестр запрещённых к изменению параметров
-    get block() {
-      return this.#block;
-    }
+    get block() { return this.#block }
 
     // Диаметр узла
     #diameter = 100;
 
     // Прочитать диаметр узла
-    get diameter() {
-      return this.#diameter;
-    }
+    get diameter() { return this.#diameter }
 
     // Степень увеличения диаметра
     #increase = 0;
 
     // Прочитать степень увеличения диаметра
-    get increase() {
-      return this.#increase;
-    }
+    get increase() { return this.#increase }
 
     // Величина степени увеличения диаметра
     #addition = 12;
 
     // Прочитать величину степени увеличения диаметра
-    get addition() {
-      return this.#addition;
-    }
+    get addition() { return this.#addition }
 
     // Величина степени увеличения притягивания и отталкивания
     #shift = 0;
 
     // Прочитать величину степени увеличения притягивания и отталкивания
-    get shift() {
-      return this.#shift;
-    }
-
-    // Глобальный счётчик итераций
-    iteration = 0;
-
-    // Ограничение максимального количества всех итераций
-    limit = 3000;
+    get shift() { return this.#shift }
 
     /**
      * Обработка событий
      *
      * max - максимум итераций в процессе
      * current - текущая итерация в процессе
-     * flow - максимум итераций в потоке
      */
     actions = {
       collision: {
         active: false,
         max: 100,
-        current: 0,
-        flow: {
-          medium: 30,
-          hard: 300
-        }
+        current: 0
       },
       pushing: {
         active: true,
         max: 100,
-        current: 0,
-        flow: {
-          medium: 30,
-          hard: 300
-        }
+        current: 0
       },
       pulling: {
         active: false,
         max: 100,
-        current: 0,
-        flow: {
-          medium: 30,
-          hard: 300
-        }
+        current: 0
+      },
+      move: {
+        active: true,
+        status: false
       }
     };
 
@@ -222,6 +186,61 @@ class graph {
      * Реестр узлов которые обработали притягивание с целевым узлом в потоке
      */
     pullings = new Set;
+
+    /**
+     * Расчёт времени анимации
+     */
+    #timing = 'cubic-bezier(0, 1, 1, 1)';
+
+    /**
+     * Прочитать расчёт времени анимации
+     */
+    get timing() { return this.#timing }
+
+    /**
+     * Длительность анимации (в секундах)
+     */
+    #duration = '3';
+
+    /**
+     * Прочитать длительность анимации (в секундах)
+     */
+    get duration() { return this.#duration }
+
+    /**
+     * Анимация (HTMLElement <style>)
+     */
+    #animation;
+
+    /**
+     * Прочитать анимацию (HTMLElement <style>)
+     */
+    get animation() { return this.#animation }
+
+    /**
+     * Троттлинг анимации
+     *
+     * Время после которого будет удалена (готова для перезапуска) анимация при завершении движения узла (остановке)
+     */
+    #throttle = 300;
+
+    /**
+     * Прочитать троттлинг анимации
+     */
+    get throttle() { return this.#throttle }
+
+    /**
+     * Движение
+     */
+    #movement = {
+      status: null,
+      observer: null,
+      from: { x: null, y: null },
+      to: { x: null, y: null }
+    }
+
+    // Прочитать движение
+    get movement() { return this.#movement }
 
     /**
      * Конструктор узла
@@ -256,17 +275,17 @@ class graph {
       // Инициализация HTML-элемента узла
       const article = document.createElement('article');
       article.id = this.#operator.id + '_node_' + this.#operator.nodes.size;
-      if (typeof data.color === 'string') article.classList.add(data.color);
       article.classList.add(..._this.operator.classes.node.element);
-      if (typeof data.href === 'string') {
-        article.href = data.href;
-      }
+      article.style.animationName = article.id + '_animation';
+      article.style.animationFillMode = 'forwards';
+      article.style.animationDuration = this.#duration + 's';
+      article.style.animationTimingFunction = this.#timing;
+      if (typeof data.color === 'string') article.classList.add(data.color);
+      if (typeof data.href === 'string') article.href = data.href;
+
 
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
-      article.onmouseenter = fn => {
-        // Запись класса с анимацией
-        article.classList.add(..._this.#operator.classes.node.onmouseenter);
-      };
+      article.onmouseenter = fn => article.classList.add(..._this.#operator.classes.node.onmouseenter);
 
       // Инициализация заголовка
       const title = document.createElement('h4');
@@ -282,74 +301,31 @@ class graph {
       if (typeof data.popup === 'string') description.title = data.popup;
 
       // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
-      description.onmouseenter = fn => {
-        // Запись класса с анимацией
-        description.classList.add(..._this.#operator.classes.node.onmouseenter);
-      };
+      description.onmouseenter = fn => description.classList.add(..._this.#operator.classes.node.onmouseenter);
 
-      // Запись блокировки открытия описания в случае, если был перемещён узел
+      // Инициализация блокировки открытия описания в случае, если был перемещён узел
       title.onmousedown = (onmousedown) => {
         // Инициализация координат
         let x = onmousedown.pageX;
         let y = onmousedown.pageY;
 
-        // Запись события открытия описания
         title.onclick = (onclick) => {
           // Отображение описания
           _this.show();
 
           // Удаление событий
-          title.onclick = title.onmousemove = null;
+          title.onclick = title.onmousemove = title.style.cursor = null;
 
           // Реинициализация координат
-          x = onclick.pageX;
-          y = onclick.pageY;
-
-          // Удаление иконки курсора
-          title.style.cursor = null;
+          (x = onclick.pageX, y = onclick.pageY);
 
           return true;
         }
 
         title.onmousemove = (onmousemove) => {
-          // Курсор сдвинут более чем на 15 пикселей?
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
-            // Запись иконки курсора
-            title.style.cursor = 'grabbing';
-
-            // Запись события для переноса узла
-            title.onclick = (onclick) => {
-              // Удаление событий
-              title.onclick = title.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              title.style.cursor = null;
-
-              return false;
-            }
-          } else {
-            // Запись события открытия описания
-            title.onclick = (onclick) => {
-              // Отображение описания
-              _this.show();
-
-              // Удаление событий
-              title.onclick = title.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              title.style.cursor = null;
-
-              return true;
-            };
-          }
+          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать открытие описания
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (title.style.cursor = 'grabbing', title.onclick = (onclick) => (title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
+          else title.onclick = (onclick) => (_this.show(), title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
         }
       };
 
@@ -378,65 +354,28 @@ class graph {
       if (typeof data.link === 'object' && typeof data.link.title === 'string') a.title = data.link.title;
 
       // Блокировка событий браузера (чтобы не мешать переноса узла)
-      a.ondragstart = a.onselectstart = fn => { return false };
+      a.ondragstart = a.onselectstart = fn => false;
 
-      // Запись блокировки перехода по ссылке в случае, если был перемещён узел
+      // Инициализация блокировки перехода по ссылке в случае, если был перемещён узел
       a.onmousedown = (onmousedown) => {
         // Инициализация координат
         let x = onmousedown.pageX;
         let y = onmousedown.pageY;
 
-        // Запись события открытия описания
         a.onclick = (onclick) => {
-          // Удаление событий
-          a.onclick = a.onmousemove = null;
+          // Деинициализация изменённых параметров
+          a.onclick = a.onmousemove = a.style.cursor = null;
 
           // Реинициализация координат
-          x = onclick.pageX;
-          y = onclick.pageY;
-
-          // Удаление иконки курсора
-          a.style.cursor = null;
+          (x = onclick.pageX, y = onclick.pageY);
 
           return true;
         }
 
         a.onmousemove = (onmousemove) => {
-          // Курсор сдвинут более чем на 15 пикселей?
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
-            // Запись иконки курсора
-            a.style.cursor = 'grabbing';
-
-            // Запись события для переноса узла
-            a.onclick = (onclick) => {
-              // Удаление событий
-              a.onclick = a.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              a.style.cursor = null;
-
-              return false;
-            }
-          } else {
-            // Запись события открытия описания
-            a.onclick = (onclick) => {
-              // Удаление событий
-              a.onclick = a.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              a.style.cursor = null;
-
-              return true;
-            };
-          }
+          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать переход по ссылке
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (a.style.cursor = 'grabbing', a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
+          else a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
         }
       };
 
@@ -450,9 +389,7 @@ class graph {
       // Запись в оболочку
       description.appendChild(text);
 
-      if (
-        typeof data.cover === 'string'
-      ) {
+      if (typeof data.cover === 'string') {
         // Получено изображение-обложка
 
         // Инициализация изображения-обложки
@@ -465,15 +402,8 @@ class graph {
         description.appendChild(cover);
       }
 
-      if (
-        typeof data.append === 'HTMLCollection' ||
-        typeof data.append === 'HTMLElement'
-      ) {
-        // Получены другие HTML-элементы
-
-        // Запись в оболочку
-        article.appendChild(data.append);
-      }
+      // Запись в оболочку
+      if (typeof data.append === 'HTMLCollection' || typeof data.append === 'HTMLElement') article.appendChild(data.append);
 
       // Инициализация кнопки закрытия
       const close = document.createElement('i');
@@ -594,7 +524,7 @@ class graph {
         _this.reset();
 
         // Обработка сдвига
-        _this.move(null, null, true);
+        _this.move(null, null);
       }
 
       /**
@@ -619,24 +549,22 @@ class graph {
         _this.reset();
 
         // Обработка сдвига
-        _this.move(null, null, true);
+        _this.move(null, null);
       }
 
       // Запись в реестр
       this.#operator.nodes.add(this);
 
-      // Сброс данных потока
-      this.reset();
+      // Инициализация координат центров
+      const horizontal = this.#operator.shell.offsetWidth / 2 - this.#diameter / 2;
+      const vertical = this.#operator.shell.offsetHeight / 2 - this.#diameter / 2;
+
+      // Инициализация начальных координат
+      this.element.style.left = this.#movement.from.x = horizontal + (0.5 - Math.random()) * 500 + 'px';
+      this.element.style.top = this.#movement.from.y = vertical + (0.5 - Math.random()) * 500 + 'px';
 
       // Перемещение
-      this.move(
-        this.#operator.shell.offsetWidth / 2 -
-        this.#diameter / 2 +
-        (0.5 - Math.random()) * 500,
-        this.#operator.shell.offsetHeight / 2 -
-        this.#diameter / 2 +
-        (0.5 - Math.random()) * 500
-      );
+      this.move(horizontal + (0.5 - Math.random()) * 500, vertical + (0.5 - Math.random()) * 500);
     }
 
     init(increase = 0) {
@@ -644,39 +572,16 @@ class graph {
       this.#increase = increase;
 
       // Инициализация диаметра
-      if (this.#increase !== 0)
-        this.#diameter += this.#addition ** this.#increase;
+      if (this.#increase !== 0) this.#diameter += this.#addition ** this.#increase;
 
       // Инициализация размера HTML-элемента
-      this.element.style.width = this.element.style.height =
-        this.#diameter + 'px';
+      this.element.style.width = this.element.style.height = this.#diameter + 'px';
 
       // Инициализация описания
       const description = this.element.getElementsByClassName('description')[0];
 
       // Запись отступа описания (чтобы был по центру узла)
       description.style.marginLeft = description.style.marginTop = (this.element.offsetWidth - description.offsetWidth) / 2 + 'px';
-
-      // Инициализация ссылки на ядро
-      const _this = this;
-
-      // Инициализация наблюдателя
-      this.#observer = new MutationObserver(function (mutations) {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes') {
-            // Перехвачено изменение аттрибута
-
-            // Запись параметра в инстанцию бегущей строки
-            _this.configure(mutation.attributeName);
-          }
-        }
-      });
-
-      // Активация наблюдения
-      this.observer.observe(this.element, {
-        attributes: true,
-        attributeOldValue: true
-      });
     }
 
     /**
@@ -684,30 +589,84 @@ class graph {
      *
      * @param {*} x Координата X (относительно левого верхнего края)
      * @param {*} y Координата Y (относительно левого верхнего края)
-     * @param {*} hard Увеличить количество итераций для процесса?
+     *
+     * @return {bool} Статус выполнения
      */
-    move(x, y, hard = false) {
+    move(x, y) {
+      // Инициализация конечных координат
+      (this.#movement.to.x ??= this.#element.offsetLeft, this.#movement.to.y ??= this.#element.offsetTop);
+
       // Проверка входящих параметров
-      if (typeof x !== 'number') x = this.element.getAttribute('data-x') ?? 0;
-      else {
-        // Запись отступа
-        this.element.style.left = x + 'px';
+      if (typeof x !== 'number' || typeof y !== 'number') (x = this.#movement.to.x, y = this.#movement.to.y);
 
-        // Запись аттрибута с координатой
-        this.element.setAttribute('data-x', x);
+      // Округление координат
+      (x = Math.round(x), y = Math.round(y));
+
+      if (this.#movement.status !== 'completed') {
+        // Не завершено движение
+
+        // Запись начальных координат
+        this.#movement.from = { x: this.#element.offsetLeft, y: this.#element.offsetTop };
+
+        // Запись наблюдателя для проверки того, что движение было завершено
+        if (this.#movement.observer === null) this.#movement.observer = setInterval(fn => {
+          if (this.#element.offsetLeft === this.#movement.to.x && this.#element.offsetTop === this.#movement.to.y) {
+            // Завершено движение
+
+            // Запись координат
+            (this.element.style.left = this.#movement.to.x + 'px', this.element.style.top = this.#movement.to.y + 'px');
+
+            // Удаление координат движения
+            this.#movement.from = this.#movement.to;
+
+            // Запись статуса
+            this.#movement.status = 'completed';
+
+            // Удаление анимации (для того, чтобы запустить её с начала)
+            if (this.#animation instanceof HTMLElement) setTimeout((this.#animation.remove(), this.#animation = undefined), this.#throttle);
+
+            // Сброс счётчиков
+            this.actions.collision.current = this.actions.pushing.current = this.actions.pulling.current = 0;
+
+            // Десинхронизация узла с его соединениями
+            for (const connection of this.#inputs) connection.desynchronize(this);
+            for (const connection of this.#outputs) connection.desynchronize(this);
+
+            // Сброс данных потока
+            this.reset();
+
+            // Удаление наблюдателя
+            (clearInterval(this.#movement.observer), this.#movement.observer = null);
+          }
+        }, 10);
       }
 
-      if (typeof y !== 'number') y = this.element.getAttribute('data-y') ?? 0;
-      else {
-        // Запись отступа
-        this.element.style.top = y + 'px';
+      // Запись статуса
+      this.#movement.status = 'moving';
 
-        // Запись аттрибута с координатой
-        this.element.setAttribute('data-y', y);
+      // Запись конечных координат движения
+      this.#movement.to = { x, y };
+
+      if (typeof this.#animation === 'undefined') {
+        // Не найден HTML-элемент с анимацией
+
+        // Инициализация HTML-элемента с анимацией
+        const style = document.createElement('style');
+        style.id = this.element.id + '_animation';
+        style.classList.add(...this.operator.classes.node.animation);
+
+        // Запись в документ
+        this.#element.appendChild(style);
+
+        // Запись в свойство
+        this.#animation = style;
       }
+
+      // Запись анимации
+      this.#animation.innerHTML = `@keyframes ${this.#animation.id} {0% { left: ${this.#movement.from.x}px; top: ${this.#movement.from.y}px; } 100% { left: ${this.#movement.to.x}px; top: ${this.#movement.to.y}px; }}`;
 
       // Обработка столкновений
-      if (this.collisions && !this.collisions.has(this)) this.collision(this.#operator.nodes, hard);
+      if (this.collisions && !this.collisions.has(this)) this.collision(this.#operator.nodes);
 
       // Инициализация буфера реестра узлов
       const registry = new Set(this.#operator.nodes);
@@ -725,7 +684,7 @@ class graph {
           registry.delete(connection.to);
 
           // Обработка отталкивания
-          this.pushing(new Set([connection.to]), 0, hard);
+          this.pushing(new Set([connection.to]), 0);
         }
 
         for (const connection of this.inputs) {
@@ -738,7 +697,7 @@ class graph {
           registry.delete(connection.from);
 
           // Обработка отталкивания
-          this.pushing(new Set([connection.from]), 0, hard);
+          this.pushing(new Set([connection.from]), 0);
         }
       }
 
@@ -755,7 +714,7 @@ class graph {
           registry.delete(connection.to);
 
           // Обработка притягивания
-          this.pulling(new Set([connection.to]), 0, hard);
+          this.pulling(new Set([connection.to]), 0);
         }
 
         for (const connection of this.inputs) {
@@ -768,17 +727,15 @@ class graph {
           registry.delete(connection.from);
 
           // Обработка притягивания
-          this.pulling(new Set([connection.from]), 0, hard);
+          this.pulling(new Set([connection.from]), 0);
         }
       }
 
       // Обработка отталкивания остальных узлов
-      if (this.pushings) this.pushing(registry, 0, hard);
+      if (this.pushings) this.pushing(registry, 0);
 
-      // Синхронизация местоположения исходящих соединений
+      // Синхронизация узла с его соединениями
       for (const connection of this.outputs) connection.synchronize(this);
-
-      // Синхронизация местоположения входящих соединений
       for (const connection of this.inputs) connection.synchronize(this);
     }
 
@@ -786,19 +743,12 @@ class graph {
      * Обработать столкновения
      *
      * @param {*} nodes
-     * @param {*} hard
      *
      * @returns
      */
-    collision(nodes, hard = false) {
+    collision(nodes) {
       // Проверка на активность столкновения
       if (!this.#operator.actions.collision || !this.actions.collision.active) return false;
-
-      // Проверка на превышение ограничения по числу итераций у целевого узла
-      if (++this.iteration >= this.limit) return (this.iteration = 0, false);
-
-      // Инициализация счётчика итераций
-      let iterations = 0;
 
       // Инициализация универсального буфера
       let buffer;
@@ -820,9 +770,6 @@ class graph {
         // Защита от повторной обработки обрабатываемого узла
         if (typeof operator.collisions === 'object' && operator.collisions.has(node)) return false;
 
-        // Проверка на превышение ограничения по числу итераций у целевого узла
-        if (++operator.iteration >= operator.limit) return (operator.iteration = 0, false);
-
         // Инициализация координат целевого узла
         const x1 = (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) + node.element.offsetWidth / 2;
         const y1 = (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) + node.element.offsetHeight / 2;
@@ -835,10 +782,7 @@ class graph {
         const between = new Victor(x1 - x2, y1 - y2);
 
         // Узлы преодолели расстояние столкновения? (ограничение выполнения)
-        if (
-          between.length() > node.diameter / 2 + operator.diameter / 2 ||
-          ++iterations > (hard ? operator.actions.collision.flow.hard : operator.actions.collision.flow.medium)
-        ) return false;
+        if (between.length() > node.diameter / 2 + operator.diameter / 2) return false;
 
         // Реинициализация реестра обработанных узлов и запись целевого узла
         node.collisions = node.#operator.actions.collision ? new Set([operator]) : null;
@@ -873,17 +817,13 @@ class graph {
      *
      * @param {*} nodes
      * @param {*} add
-     * @param {*} hard
      * @param {*} distance
      *
      * @returns
      */
-    pushing(nodes = [], add, hard = false, distance = 100) {
+    pushing(nodes = [], add, distance = 100) {
       // Проверка на активность отталкивания целевого узла
       if (!this.#operator.actions.pushing || !this.actions.pushing.active) return false;
-
-      // Инициализация счётчика итераций
-      let iterations = 0;
 
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
@@ -894,25 +834,29 @@ class graph {
       for (const node of registry) {
         // Перебор обрабатываемых узлов
 
-        // Проверка на превышение ограничения по числу итераций у целевого узла
-        if (++this.iteration >= this.limit) return (this.iteration = 0, false);
+        // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
+        if (++this.actions.pushing.current > this.actions.pushing.max) return false;
 
-        // Проверка на превышение ограничения по числу итераций для отталкивания у обрабатываемого узла
+        // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
         if (++node.actions.pushing.current > node.actions.pushing.max) continue;
 
-        // Проверка на активность отталкивания обрабатываемого узла
+        // Проверка на активность отталкивания у целевого узла
+        if (!this.#operator.actions.pushing || !this.actions.pushing.active) return false;
+
+        // Проверка на активность отталкивания у обрабатываемого узла
         if (!node.#operator.actions.pushing || !node.actions.pushing.active) continue;
 
         // Защита от повторной обработки обрабатываемого узла
         if (typeof this.pushings === 'object' && this.pushings.has(node)) continue;
+        else this.pushings.add(node);
 
         // Инициализация координат целевого узла
-        const x1 = node.element.offsetLeft + node.element.offsetWidth / 2;
-        const y1 = node.element.offsetTop + node.element.offsetHeight / 2;
+        let x1 = node.element.offsetLeft + node.element.offsetWidth / 2;
+        let y1 = node.element.offsetTop + node.element.offsetHeight / 2;
 
         // Инициализация координат обрабатываемого узла
-        const x2 = this.element.offsetLeft + this.element.offsetWidth / 2;
-        const y2 = this.element.offsetTop + this.element.offsetHeight / 2;
+        let x2 = this.element.offsetLeft + this.element.offsetWidth / 2;
+        let y2 = this.element.offsetTop + this.element.offsetHeight / 2;
 
         // Инициализация вектора между узлами
         const between = new Victor(x1 - x2, y1 - y2);
@@ -921,21 +865,16 @@ class graph {
         const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (this.diameter + node.diameter) / 2 ** (this.increase + node.increase) + (typeof add === 'number' ? add : 0) - between.length();
 
         // Узлы преодолели расстояние отталкивания?
-        if (difference <= 0 || ++iterations > (hard ? this.actions.pushing.flow.hard : this.actions.pushing.flow.medium)) continue;
+        if (difference <= 0) continue;
 
         // Реинициализация реестра обработанных узлов и запись целевого узла
         node.pushings = node.#operator.actions.pushing ? new Set([this]) : null;
 
-        // Реинициализация счётчиков итераций
-        node.actions.pushing.current = 0;
+        // Инициализация вектора целевой позиции для перемещения
+        const target = new Victor(difference, difference);
 
-        // Инициализация расстояния сдвига
-        const offset = new Victor(difference, difference);
-
-        // Инициализация координат обрабатываемого узла
-        const vector = new Victor(x1, y1)
-          .add(offset.rotate(between.angle() - offset.angle()))
-          .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
+        // Инициализация вектора новой позиции обрабатываемого узла
+        const vector = new Victor(x1, y1).add(target.rotate(between.angle() - target.angle())).subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
 
         // Перемещение
         node.move(vector.x, vector.y);
@@ -956,9 +895,6 @@ class graph {
       // Проверка на активность притягивания целевого узла
       if (!this.#operator.actions.pulling || !this.actions.pulling.active) return false;
 
-      // Инициализация счётчика итераций
-      let iterations = 0;
-
       // Инициализация буфера реестра узлов
       const registry = new Set(nodes);
 
@@ -967,9 +903,6 @@ class graph {
 
       for (const node of registry) {
         // Перебор обрабатываемых узлов
-
-        // Проверка на превышение ограничения по числу итераций у целевого узла
-        if (++this.iteration >= this.limit) return (this.iteration = 0, false);
 
         // Проверка на превышение ограничения по числу итераций для отталкивания у обрабатываемого узла
         if (++node.actions.pulling.current > node.actions.pulling.max) continue;
@@ -994,11 +927,6 @@ class graph {
         // Вычисление разницы между необходимым расстоянием и текущим
         const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (this.diameter + node.diameter) / 2 ** (this.increase + node.increase) + (typeof add === 'number' ? add : 0) - between.length();
 
-        console.log(difference);
-
-        // Узлы преодолели расстояние отталкивания?
-        if (difference > 0 || ++iterations > (hard ? this.actions.pulling.flow.hard : this.actions.pulling.flow.medium)) continue;
-
         // Реинициализация реестра обработанных узлов и запись целевого узла
         node.pullings = node.#operator.actions.pulling ? new Set([this]) : null;
 
@@ -1018,43 +946,6 @@ class graph {
       }
     }
 
-    configure(attribute) {
-      // Инициализация названия параметра
-      const parameter = (/^data-(\w+)$/.exec(attribute) ?? [, null])[1];
-
-      if (typeof parameter === 'string') {
-        // Параметр найден
-
-        // Проверка на разрешение изменения
-        if (this.#block.has(parameter)) return;
-
-        // Инициализация значения параметра
-        const value = this.element.getAttribute(attribute);
-
-        if (typeof value !== undefined || typeof value !== null) {
-          // Найдено значение
-
-          // Запрошено изменение координаты: x
-          if (parameter === 'x') this.element.style.left = value + 'px';
-
-          // Запрошено изменение координаты: y
-          if (parameter === 'y') this.element.style.top = value + 'px';
-
-          // Инициализация буфера для временных данных
-          let buffer;
-
-          // Запись параметра
-          this[parameter] = isNaN((buffer = parseFloat(value)))
-            ? value === 'true'
-              ? true
-              : value === 'false'
-                ? false
-                : value
-            : buffer;
-        }
-      }
-    }
-
     /**
      * Сброс данных потока
      */
@@ -1070,9 +961,7 @@ class graph {
   };
 
   // Прочитать класс узла
-  get node() {
-    return this.#node;
-  }
+  get node() { return this.#node }
 
   // Класс соединения
   #connection = class connection {
@@ -1080,81 +969,61 @@ class graph {
     #shell;
 
     // Прочитать HTML-элемент-оболочку
-    get shell() {
-      return this.#shell;
-    }
+    get shell() { return this.#shell }
 
     // HTML-элемент соединения
     #element;
 
     // Прочитать HTML-элемент соединения
-    get element() {
-      return this.#element;
-    }
+    get element() { return this.#element }
 
     // Инстанция this.operator.node от которой начинается соединение
     #from;
 
     // Прочитать инстанцию this.operator.node от которой начинается соединение
-    get from() {
-      return this.#from;
-    }
+    get from() { return this.#from }
 
     // Инстанция this.operator.node на которой заканчивается соединение
     #to;
 
     // Прочитать инстанцию this.operator.node на которой заканчивается соединение
-    get to() {
-      return this.#to;
-    }
+    get to() { return this.#to }
 
     // Оператор
     #operator;
 
     // Прочитать оператора
-    get operator() {
-      return this.#operator;
-    }
+    get operator() { return this.#operator }
 
     // Сессии синхронизации позиции узлов с соединениями
     #sessions = new Map;
 
     // Прочитать сессии синхронизации позиции узлов с соединениями
-    get sessions() {
-      return this.#sessions;
-    }
+    get sessions() { return this.#sessions }
 
     // Координата X (основной узел)
     #x1
 
     // Прочитать координату X (основной узел)
-    get x1() {
-      return this.#x1;
-    }
+    get x1() { return this.#x1 }
 
     // Координата Y (основной узел)
     #y1
 
     // Прочитать координату Y (основной узел)
-    get y1() {
-      return this.#y1;
-    }
+    get y1() { return this.#y1 }
 
     // Координата X (связанный узел)
     #x2
 
     // Прочитать координату X (связанный узел)
-    get x2() {
-      return this.#x2;
-    }
+    get x2() { return this.#x2 }
 
     // Координата X (связанный узел)
     #y2
 
     // Прочитать координату X (связанный узел)
-    get y2() {
-      return this.#y2;
-    }
+    get y2() { return this.#y2 }
 
     /**
      * Конструктор соединения
@@ -1190,14 +1059,8 @@ class graph {
         this.#shell = shell;
       }
 
-      // Инициализация универсального буфера
-      let buffer;
-
       // Инициализация координат
-      this.#x1 = (isNaN((buffer = parseInt(from.element.style.left))) ? 0 : buffer) + from.element.offsetWidth / 2;
-      this.#y1 = (isNaN((buffer = parseInt(from.element.style.top))) ? 0 : buffer) + from.element.offsetHeight / 2;
-      this.#x2 = (isNaN((buffer = parseInt(to.element.style.left))) ? 0 : buffer) + to.element.offsetWidth / 2;
-      this.#y2 = (isNaN((buffer = parseInt(to.element.style.top))) ? 0 : buffer) + to.element.offsetHeight / 2;
+      (this.#x1 = from.element.offsetLeft + from.element.offsetWidth / 2, this.#y1 = from.element.offsetTop + from.element.offsetHeight / 2, this.#x2 = to.element.offsetLeft + to.element.offsetWidth / 2, this.#y2 = to.element.offsetTop + to.element.offsetHeight / 2);
 
       // Инициализация оболочки
       const line = document.createElementNS(
@@ -1223,40 +1086,32 @@ class graph {
     }
 
     /**
-     * Синхронизировать местоположение со связанным узлом
+     * Синхронизировать c узлом
      *
      * @param {node} node Инстанция узла (связанного с соединением)
      */
     synchronize(node) {
+      // Десинхронизация
+      this.desynchronize(node);
+
+      // Синхронизация
+      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`), 0));
+      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`), 0));
+    }
+
+    /**
+     * Десинхронизировать c узлом
+     *
+     * @param {node} node Инстанция узла (связанного с соединением)
+     */
+    desynchronize(node) {
       // Удаление интервала
       clearInterval(this.#sessions.get(node.element.id));
-
-      // Инициализация интервала
-      this.#sessions.set(node.element.id, setInterval(fn => {
-        if (node === this.from) {
-          // Исходящее соединение
-
-          // Инициализация координат
-          this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2;
-          this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2;
-        } else if (node === this.to) {
-          // Входящее соединение
-
-          // Инициализация координат
-          this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2;
-          this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2;
-        } else return;
-
-        // Запись координат
-        this.element.setAttribute('d', `M${this.x1} ${this.y1} L${this.x2} ${this.y2}`);
-      }, 0));
     }
   };
 
   // Прочитать класс соединения
-  get connection() {
-    return this.#connection;
-  }
+  get connection() { return this.#connection }
 
   // Разрешено перемещать узлы?
   #move = true;
@@ -1288,9 +1143,10 @@ class graph {
     // Инициализация цели для переноса
     const target = body ? document.body : shell;
 
-    // Перемещение камеры
     if (camera === true) {
-      target.onmousedown = function (onmousedown) {
+      // Инициализировать функцию переноса камеры (оболочки)?
+
+      target.onmousedown = (onmousedown) => {
         // Начало переноса
 
         if (_this.#camera) {
@@ -1330,27 +1186,16 @@ class graph {
             // Запись аттрибута с координатами для HTML-элемента оболочки соединений
             connections.setAttribute('data-y', -buffer);
 
-            for (const connection of _this.connections) {
-              // Перебор соединений
-
-              // Синхронизация
-              connection.synchronize(connection.from);
-              connection.synchronize(connection.to);
-            }
+            // Синхронизация
+            for (const connection of _this.connections) (connection.synchronize(connection.from), connection.synchronize(connection.to));
           }
 
           // Запись слушателя события: "перенос полотна"
           target.onmousemove = move;
         }
 
-        // Конец переноса
-        target.onmouseup = function () {
-          target.onmousemove = null;
-          target.onmouseup = null;
-
-          // Запись иконки курсора
-          target.style.cursor = null;
-        };
+        // Конец переноса (деинициализация)
+        target.onmouseup = () => target.onmousemove = target.onmouseup = target.style.cursor = null;
       };
 
       // Блокировка событий браузера (чтобы не дёргалось)
@@ -1358,7 +1203,7 @@ class graph {
     }
   }
 
-  write = function (data = {}) {
+  write = (data = {}) => {
     if (typeof data === 'object') {
       // Получен обязательный входной параметр в правильном типе
 
@@ -1369,21 +1214,17 @@ class graph {
       const _this = this;
 
       // Запрет движения камеры при наведении на узел (чтобы двигать узел)
-      node.element.onmouseover = function (e) {
-        _this.#camera = false;
-      };
+      node.element.onmouseover = fn => _this.#camera = false;
 
       // Снятие запрета движения камеры
-      node.element.onmouseout = function (e) {
-        _this.#camera = true;
-      };
+      node.element.onmouseout = fn => _this.#camera = true;
 
       if (this.#move) {
         // Разрешено перемещать узлы
 
         // Инициализация переноса узла
-        node.element.onmousedown = function (onmousedown) {
-          // Начало переноса
+        node.element.onmousedown = (onmousedown) => {
+          // Начало переноса узла
 
           // Инициализация буфера позиционирования
           const z = node.element.style.zIndex;
@@ -1391,62 +1232,31 @@ class graph {
           // Позиционирование над остальными узлами
           node.element.style.zIndex = 5000;
 
-          // Блокировка анимации
-          node.element.style.transition = 'unset';
-
           if (!_this.#camera) {
-            // Запрещено двигать камеру (оболочку)
+            // Запрещено двигать камеру (оболочку) (чтобы не двигать узел и камеру одновременно)
 
             // Инициализация координат
             const n = node.element.getBoundingClientRect();
             const s = _this.shell.getBoundingClientRect();
 
-            // Инициализация функции переноса узла
-            function move(onmousemove) {
+            // Запись слушателя события: "перенос узла"
+            document.onmousemove = (onmousemove) => (
               // Сброс данных потока
-              node.reset();
-
-              for (const connection of node.outputs) {
-                // Перебор исходящих соединений
-
-                // Синхронизация местоположения
-                for (const _connection of connection.to.inputs) _connection.synchronize(connection.to);
-                for (const _connection of connection.to.outputs) _connection.synchronize(connection.to);
-              }
-
-              for (const connection of node.inputs) {
-                // Перебор входящих соединений
-
-                // Синхронизация местоположения
-                for (const _connection of connection.from.inputs) _connection.synchronize(connection.from);
-                for (const _connection of connection.from.outputs) _connection.synchronize(connection.from);
-              }
+              node.reset(),
 
               // Перемещение узла
-              node.move(
-                onmousemove.pageX -
-                (onmousedown.pageX - n.left + s.left + scrollX),
-                onmousemove.pageY -
-                (onmousedown.pageY - n.top + s.top + scrollY)
-              );
-            }
-
-            // Запись слушателя события: "перенос узла"
-            document.onmousemove = move;
+              node.move(onmousemove.pageX - (onmousedown.pageX - n.left + s.left + scrollX), onmousemove.pageY - (onmousedown.pageY - n.top + s.top + scrollY))
+            );
           }
 
-          // Конец переноса
-          node.element.onmouseup = function () {
+          // Конец переноса узла
+          node.element.onmouseup = fn => (
             // Очистка обработчиков событий
-            document.onmousemove = null;
-            node.element.onmouseup = null;
-
-            // Разблокировка анимации
-            node.element.style.transition = null;
+            document.onmousemove = node.element.onmouseup = null,
 
             // Возвращение позиционирования
-            node.element.style.zIndex = z;
-          };
+            node.element.style.zIndex = z
+          );
         };
 
         // Перещапись событий браузера (чтобы не дёргалось)
@@ -1460,7 +1270,7 @@ class graph {
     }
   };
 
-  connect = function (from, to) {
+  connect = (from, to) => {
     if (from instanceof this.node && to instanceof this.node) {
       // Получены обязательные входные параметры в правильном типе
 
@@ -1482,8 +1292,5 @@ class graph {
   };
 }
 
-document.dispatchEvent(
-  new CustomEvent('graph.loaded', {
-    detail: { graph }
-  })
-);
+// Вызов события: "Библиотека загружена и готова к работе"
+document.dispatchEvent(new CustomEvent('graph.loaded', { detail: { graph } }));
