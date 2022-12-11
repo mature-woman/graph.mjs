@@ -810,28 +810,40 @@ class graph {
     get sessions() { return this.#sessions }
 
     // Координата X (основной узел)
-    #x1
+    #x1;
 
     // Прочитать координату X (основной узел)
     get x1() { return this.#x1 }
 
     // Координата Y (основной узел)
-    #y1
+    #y1;
 
     // Прочитать координату Y (основной узел)
     get y1() { return this.#y1 }
 
     // Координата X (связанный узел)
-    #x2
+    #x2;
 
     // Прочитать координату X (связанный узел)
     get x2() { return this.#x2 }
 
     // Координата X (связанный узел)
-    #y2
+    #y2;
 
     // Прочитать координату X (связанный узел)
     get y2() { return this.#y2 }
+
+    // Дата окончания синхронизации
+    #data = Date.now();
+
+    // Прочитать дату окончания синхронизации
+    get data() { return this.#data }
+
+    // Таймер синхронизации (в милисекундах)
+    #timer = 5000;
+
+    // Прочитать таймер синхронизации (в милисекундах)
+    get timer() { return this.#timer }
 
     /**
      * Конструктор соединения
@@ -897,17 +909,17 @@ class graph {
      * Синхронизировать c узлом
      *
      * @param {node} node Инстанция узла (связанного с соединением)
-     *
-     * @todo
-     * 1. Удаление интервала через определённое время
      */
     synchronize(node) {
       // Десинхронизация
       this.desynchronize(node);
 
+      // Инициализация времени работы синхронизации
+      this.#data = Date.now() + this.#timer;
+
       // Синхронизация
-      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`)), 0);
-      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`)), 0);
+      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn =>  Date.now() < this.#data ? this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`) : this.desynchronize(node)), 0);
+      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => Date.now() < this.#data ? this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`) : this.desynchronize(node)), 0);
     }
 
     /**
@@ -1005,6 +1017,9 @@ class graph {
 
       // Блокировка событий браузера (чтобы не дёргалось)
       target.ondragstart = null;
+
+      // Каждые 3 секунды обрабатывать взаимодействия между узлами
+      setInterval(fn => { for (const node of _this.nodes) node.move() }, 3000);
     }
   }
 
@@ -1064,6 +1079,9 @@ class graph {
 
             // Запись статуса о том, что узел в данный момент НЕ перемещается
             for (const node of _this.nodes) node.actions.move.unlimit = false;
+
+            // Обработка взаимодействий между всеми узлами
+            for (const node of _this.nodes) node.move();
 
             // Возвращение позиционирования
             node.element.style.zIndex = z;
