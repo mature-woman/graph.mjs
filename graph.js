@@ -65,9 +65,12 @@ class graph {
 
   // Статус активации функций взаимодействий узлов
   actions = {
-    collision: false,
     pushing: true,
-    pulling: true
+    pulling: true,
+    move: {
+      shell: true,
+      node: true
+    }
   }
 
   // Класс узла
@@ -145,10 +148,9 @@ class graph {
      * current - текущая итерация в процессе
      */
     actions = {
-      collision: {
-        active: false,
-        max: 100,
-        current: 0
+      move: {
+        active: true,
+        unlimit: false
       },
       pushing: {
         active: true,
@@ -156,27 +158,16 @@ class graph {
         current: 0
       },
       pulling: {
-        active: false,
+        active: true,
         max: 100,
         current: 0
-      },
-      move: {
-        active: true,
-        status: false
       }
     };
 
     /**
-     * Столкновения
-     *
-     * Реестр узлов которые обработали столкновения с целевым узлом в потоке
-     */
-    collisions = new Set;
-
-    /**
      * Отталкивания
      *
-     * Реестр узлов которые обработали столкновения с целевым узлом в потоке
+     * Реестр узлов которые обработали отталкивание с целевым узлом в потоке
      */
     pushings = new Set;
 
@@ -309,18 +300,7 @@ class graph {
         let x = onmousedown.pageX;
         let y = onmousedown.pageY;
 
-        title.onclick = (onclick) => {
-          // Отображение описания
-          _this.show();
-
-          // Удаление событий
-          title.onclick = title.onmousemove = title.style.cursor = null;
-
-          // Реинициализация координат
-          (x = onclick.pageX, y = onclick.pageY);
-
-          return true;
-        }
+        title.onclick = (onclick) => (_this.show(), title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
 
         title.onmousemove = (onmousemove) => {
           // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать открытие описания
@@ -362,15 +342,7 @@ class graph {
         let x = onmousedown.pageX;
         let y = onmousedown.pageY;
 
-        a.onclick = (onclick) => {
-          // Деинициализация изменённых параметров
-          a.onclick = a.onmousemove = a.style.cursor = null;
-
-          // Реинициализация координат
-          (x = onclick.pageX, y = onclick.pageY);
-
-          return true;
-        }
+        a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
 
         a.onmousemove = (onmousemove) => {
           // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать переход по ссылке
@@ -409,69 +381,18 @@ class graph {
       const close = document.createElement('i');
       close.classList.add(..._this.#operator.classes.node.close.both, ..._this.#operator.classes.node.close.hidden);
 
-      // Запись блокировки закрытия в случае, если был перемещён узел
+      // Запись блокировки закрытия описания в случае, если был перемещён узел
       close.onmousedown = (onmousedown) => {
         // Инициализация координат
         let x = onmousedown.pageX;
         let y = onmousedown.pageY;
 
-        // Запись события открытия описания
-        close.onclick = (onclick) => {
-          // Скрытие описания
-          _this.hide();
-
-          // Удаление событий
-          close.onclick = close.onmousemove = null;
-
-          // Реинициализация координат
-          x = onclick.pageX;
-          y = onclick.pageY;
-
-          // Удаление иконки курсора
-          close.style.cursor = null;
-
-          return true;
-        }
+        close.onclick = (onclick) => (_this.hide(), close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
 
         close.onmousemove = (onmousemove) => {
-          // Курсор сдвинут более чем на 15 пикселей?
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) {
-            // Запись иконки курсора
-            close.style.cursor = 'grabbing';
-
-            // Запись события для переноса узла
-            close.onclick = (onclick) => {
-              // Удаление событий
-              close.onclick = close.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              close.style.cursor = null;
-
-              return false;
-            }
-          } else {
-            // Запись события открытия описания
-            close.onclick = (onclick) => {
-              // Скрытие описания
-              _this.hide();
-
-              // Удаление событий
-              close.onclick = close.onmousemove = null;
-
-              // Реинициализация координат
-              x = onclick.pageX;
-              y = onclick.pageY;
-
-              // Удаление иконки курсора
-              close.style.cursor = null;
-
-              return true;
-            };
-          }
+          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать закрытие описания
+          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (close.style.cursor = 'grabbing', close.onclick = (onclick) => (close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
+          else close.onclick = (onclick) => (_this.hide(), close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
         }
       };
 
@@ -524,7 +445,7 @@ class graph {
         _this.reset();
 
         // Обработка сдвига
-        _this.move(null, null);
+        _this.move();
       }
 
       /**
@@ -549,7 +470,7 @@ class graph {
         _this.reset();
 
         // Обработка сдвига
-        _this.move(null, null);
+        _this.move();
       }
 
       // Запись в реестр
@@ -593,6 +514,8 @@ class graph {
      * @return {bool} Статус выполнения
      */
     move(x, y) {
+      if (!this.actions.move.active) return false;
+
       // Инициализация конечных координат
       (this.#movement.to.x ??= this.#element.offsetLeft, this.#movement.to.y ??= this.#element.offsetTop);
 
@@ -626,7 +549,7 @@ class graph {
             if (this.#animation instanceof HTMLElement) setTimeout((this.#animation.remove(), this.#animation = undefined), this.#throttle);
 
             // Сброс счётчиков
-            this.actions.collision.current = this.actions.pushing.current = this.actions.pulling.current = 0;
+            this.actions.pushing.current = this.actions.pulling.current = 0;
 
             // Десинхронизация узла с его соединениями
             for (const connection of this.#inputs) connection.desynchronize(this);
@@ -665,151 +588,31 @@ class graph {
       // Запись анимации
       this.#animation.innerHTML = `@keyframes ${this.#animation.id} {0% { left: ${this.#movement.from.x}px; top: ${this.#movement.from.y}px; } 100% { left: ${this.#movement.to.x}px; top: ${this.#movement.to.y}px; }}`;
 
-      // Обработка столкновений
-      if (this.collisions && !this.collisions.has(this)) this.collision(this.#operator.nodes);
-
       // Инициализация буфера реестра узлов
       const registry = new Set(this.#operator.nodes);
 
       if (this.pushings && !this.pushings.has(this)) {
         // Активно отталкивание
 
-        for (const connection of this.outputs) {
-          // Перебор исходящих соединений
-
-          // Ограничение выполнения
-          if (++this.actions.pushing.current >= this.actions.pushing.max) break;
-
-          // Удаление из буфера реестра узлов
-          registry.delete(connection.to);
-
-          // Обработка отталкивания
-          this.pushing(new Set([connection.to]), 0);
-        }
-
-        for (const connection of this.inputs) {
-          // Перебор входящих соединений
-
-          // Ограничение выполнения
-          if (++this.actions.pushing.current >= this.actions.pushing.max) break;
-
-          // Удаление из буфера реестра узлов
-          registry.delete(connection.from);
-
-          // Обработка отталкивания
-          this.pushing(new Set([connection.from]), 0);
-        }
+        // Обработка отталкивания
+        for (const connection of this.outputs) (registry.delete(connection.to), this.pushing(new Set([connection.to])));
+        for (const connection of this.inputs) (registry.delete(connection.from), this.pushing(new Set([connection.from])));
       }
 
       if (this.pullings && !this.pullings.has(this)) {
         // Активно притягивание
 
-        for (const connection of this.outputs) {
-          // Перебор исходящих соединений
-
-          // Ограничение выполнения
-          if (++this.actions.pulling.current >= this.actions.pulling.max) break;
-
-          // Удаление из буфера реестра узлов
-          registry.delete(connection.to);
-
-          // Обработка притягивания
-          this.pulling(new Set([connection.to]), 0);
-        }
-
-        for (const connection of this.inputs) {
-          // Перебор входящих соединений
-
-          // Ограничение выполнения
-          if (++this.actions.pulling.current >= this.actions.pulling.max) break;
-
-          // Удаление из буфера реестра узлов
-          registry.delete(connection.from);
-
-          // Обработка притягивания
-          this.pulling(new Set([connection.from]), 0);
-        }
+        // Обработка притягивания
+        for (const connection of this.outputs) (registry.delete(connection.to), this.pulling(new Set([connection.to])));
+        for (const connection of this.inputs) (registry.delete(connection.from), this.pulling(new Set([connection.from])));
       }
 
       // Обработка отталкивания остальных узлов
-      if (this.pushings) this.pushing(registry, 0);
+      if (this.pushings) this.pushing(registry);
 
       // Синхронизация узла с его соединениями
       for (const connection of this.outputs) connection.synchronize(this);
       for (const connection of this.inputs) connection.synchronize(this);
-    }
-
-    /**
-     * Обработать столкновения
-     *
-     * @param {*} nodes
-     *
-     * @returns
-     */
-    collision(nodes) {
-      // Проверка на активность столкновения
-      if (!this.#operator.actions.collision || !this.actions.collision.active) return false;
-
-      // Инициализация универсального буфера
-      let buffer;
-
-      // Инициализация оператора
-      const operator = this;
-
-      /**
-       * Столкнуть
-       *
-       * @param {*} node
-       *
-       * @returns {boolean} Узлы преодолели расстояние отталкивания?
-       */
-      function move(node) {
-        // Проверка на активность столкновения обрабатываемого узла
-        if (!node.#operator.actions.collision || !node.actions.collision.active) return false;
-
-        // Защита от повторной обработки обрабатываемого узла
-        if (typeof operator.collisions === 'object' && operator.collisions.has(node)) return false;
-
-        // Инициализация координат целевого узла
-        const x1 = (isNaN((buffer = parseInt(node.element.style.left))) ? 0 : buffer) + node.element.offsetWidth / 2;
-        const y1 = (isNaN((buffer = parseInt(node.element.style.top))) ? 0 : buffer) + node.element.offsetHeight / 2;
-
-        // Инициализация координат обрабатываемого узла
-        const x2 = (isNaN((buffer = parseInt(operator.element.style.left))) ? 0 : buffer) + operator.element.offsetWidth / 2;
-        const y2 = (isNaN((buffer = parseInt(operator.element.style.top))) ? 0 : buffer) + operator.element.offsetHeight / 2;
-
-        // Инициализация вектора между узлами
-        const between = new Victor(x1 - x2, y1 - y2);
-
-        // Узлы преодолели расстояние столкновения? (ограничение выполнения)
-        if (between.length() > node.diameter / 2 + operator.diameter / 2) return false;
-
-        // Реинициализация реестра обработанных узлов и запись целевого узла
-        node.collisions = node.#operator.actions.collision ? new Set([operator]) : null;
-
-        // Реинициализация счётчиков итераций
-        node.actions.collision.current = 0;
-
-        // Инициализация координат вектора (узла с которым произошло столкновение)
-        let vector = new Victor(x1, y1)
-          .add(new Victor(between.x, between.y).norm().unfloat())
-          .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
-
-        // Перемещение узла
-        node.move(vector.x, vector.y);
-
-        // Вход в рекурсию
-        move(node);
-      }
-
-      // Инициализация буфера реестра узлов
-      const registry = new Set(nodes);
-
-      // Удаление текущего узла из буфера
-      registry.delete(this);
-
-      // Обработка столкновения с узлами
-      for (const node of registry) if (++this.actions.collision.current < this.actions.collision.max) move(node);
     }
 
     /**
@@ -834,11 +637,20 @@ class graph {
       for (const node of registry) {
         // Перебор обрабатываемых узлов
 
-        // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
-        if (++this.actions.pushing.current > this.actions.pushing.max) return false;
+        if (this.actions.move.unlimit) {
+          // Перемещается мышью узел
 
-        // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
-        if (++node.actions.pushing.current > node.actions.pushing.max) continue;
+          // Запись о том, что узел перемещается мышью (каскадно)
+          node.actions.move.unlimit = true;
+        } else {
+          // Не перемещается мышью узел
+
+          // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
+          if (++this.actions.pushing.current > this.actions.pushing.max) return false;
+
+          // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
+          if (++node.actions.pushing.current > node.actions.pushing.max) continue;
+        }
 
         // Проверка на активность отталкивания у целевого узла
         if (!this.#operator.actions.pushing || !this.actions.pushing.active) return false;
@@ -850,31 +662,23 @@ class graph {
         if (typeof this.pushings === 'object' && this.pushings.has(node)) continue;
         else this.pushings.add(node);
 
-        // Инициализация координат целевого узла
-        let x1 = node.element.offsetLeft + node.element.offsetWidth / 2;
-        let y1 = node.element.offsetTop + node.element.offsetHeight / 2;
-
-        // Инициализация координат обрабатываемого узла
-        let x2 = this.element.offsetLeft + this.element.offsetWidth / 2;
-        let y2 = this.element.offsetTop + this.element.offsetHeight / 2;
-
         // Инициализация вектора между узлами
-        const between = new Victor(x1 - x2, y1 - y2);
+        const between = new Victor(node.element.offsetLeft - this.element.offsetLeft, node.element.offsetTop - this.element.offsetTop);
 
         // Вычисление разницы между необходимым расстоянием и текущим
-        const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (this.diameter + node.diameter) / 2 ** (this.increase + node.increase) + (typeof add === 'number' ? add : 0) - between.length();
+        const difference = (this.diameter + node.diameter) / 2 + distance + this.shift + node.shift + (typeof add === 'number' ? add : 0) - between.length();
 
         // Узлы преодолели расстояние отталкивания?
         if (difference <= 0) continue;
 
         // Реинициализация реестра обработанных узлов и запись целевого узла
-        node.pushings = node.#operator.actions.pushing ? new Set([this]) : null;
+        node.pushings = new Set([this]);
 
         // Инициализация вектора целевой позиции для перемещения
         const target = new Victor(difference, difference);
 
         // Инициализация вектора новой позиции обрабатываемого узла
-        const vector = new Victor(x1, y1).add(target.rotate(between.angle() - target.angle())).subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
+        const vector = new Victor(node.element.offsetLeft, node.element.offsetTop).add(target.rotate(between.angle() - target.angle()));
 
         // Перемещение
         node.move(vector.x, vector.y);
@@ -886,12 +690,11 @@ class graph {
      *
      * @param {*} nodes
      * @param {*} add
-     * @param {*} hard
      * @param {*} distance
      *
      * @returns
      */
-    pulling(nodes = [], add, hard = false, distance = 150) {
+    pulling(nodes = [], add, distance = 150) {
       // Проверка на активность притягивания целевого узла
       if (!this.#operator.actions.pulling || !this.actions.pulling.active) return false;
 
@@ -904,42 +707,48 @@ class graph {
       for (const node of registry) {
         // Перебор обрабатываемых узлов
 
-        // Проверка на превышение ограничения по числу итераций для отталкивания у обрабатываемого узла
-        if (++node.actions.pulling.current > node.actions.pulling.max) continue;
+        if (this.actions.move.unlimit) {
+          // Перемещается мышью узел
 
-        // Проверка на активность притягивания у обрабатываемого узла
+          // Запись о том, что узел перемещается мышью (каскадно)
+          node.actions.move.unlimit = true;
+        } else {
+          // Не перемещается мышью узел
+
+          // Проверка на превышение ограничения по числу итераций для притягивания у целевого узла
+          if (++this.actions.pulling.current > this.actions.pulling.max) return false;
+
+          // Проверка на превышение ограничения по числу итераций для притягивания у целевого узла
+          if (++node.actions.pulling.current > node.actions.pulling.max) continue;
+        }
+
+        // Проверка на активность отталкивания у целевого узла
+        if (!this.#operator.actions.pulling || !this.actions.pulling.active) return false;
+
+        // Проверка на активность отталкивания у обрабатываемого узла
         if (!node.#operator.actions.pulling || !node.actions.pulling.active) continue;
 
-        // Защита от повторной обработки обрабатываемого узла
+        // Защита от повторной обработки целевого узла
         if (typeof this.pullings === 'object' && this.pullings.has(node)) continue;
-
-        // Инициализация координат целевого узла
-        const x1 = node.element.offsetLeft + node.element.offsetWidth / 2;
-        const y1 = node.element.offsetTop + node.element.offsetHeight / 2;
-
-        // Инициализация координат обрабатываемого узла
-        const x2 = this.element.offsetLeft + this.element.offsetWidth / 2;
-        const y2 = this.element.offsetTop + this.element.offsetHeight / 2;
+        else this.pullings.add(node);
 
         // Инициализация вектора между узлами
-        const between = new Victor(x1 - x2, y1 - y2);
+        const between = new Victor(node.element.offsetLeft - this.element.offsetLeft, node.element.offsetTop - this.element.offsetTop);
 
         // Вычисление разницы между необходимым расстоянием и текущим
-        const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (this.diameter + node.diameter) / 2 ** (this.increase + node.increase) + (typeof add === 'number' ? add : 0) - between.length();
+        const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (typeof add === 'number' ? add : 0) - between.length();
+
+        // Узлы преодолели расстояние отталкивания?
+        if (difference > 0) continue;
 
         // Реинициализация реестра обработанных узлов и запись целевого узла
-        node.pullings = node.#operator.actions.pulling ? new Set([this]) : null;
+        node.pullings = new Set([this]);
 
-        // Реинициализация счётчиков итераций
-        node.actions.pulling.current = 0;
-
-        // Инициализация расстояния сдвига
-        const offset = new Victor(difference, difference);
+        // Инициализация вектора целевой позиции для перемещения
+        const target = new Victor(difference, difference);
 
         // Инициализация координат обрабатываемого узла
-        const vector = new Victor(x1, y1)
-          .add(offset.rotate(between.angle() - offset.angle()).invert())
-          .subtract(new Victor(node.element.offsetWidth / 2, node.element.offsetHeight / 2));
+        const vector = new Victor(node.element.offsetLeft, node.element.offsetTop).add(target.rotate(between.angle() - target.angle()).invert());
 
         // Перемещение узла
         node.move(vector.x, vector.y);
@@ -951,12 +760,11 @@ class graph {
      */
     reset = fn => {
       // Реинициализация реестров обработанных узлов
-      this.collisions = this.#operator.actions.collision ? new Set() : null;
       this.pushings = this.#operator.actions.pushing ? new Set() : null;
       this.pullings = this.#operator.actions.pulling ? new Set() : null;
 
       // Реинициализация счётчиков итераций
-      this.actions.collision.current = this.actions.pushing.current = this.actions.pulling.current = 0;
+      this.actions.pushing.current = this.actions.pulling.current = 0;
     }
   };
 
@@ -1089,14 +897,17 @@ class graph {
      * Синхронизировать c узлом
      *
      * @param {node} node Инстанция узла (связанного с соединением)
+     *
+     * @todo
+     * 1. Удаление интервала через определённое время
      */
     synchronize(node) {
       // Десинхронизация
       this.desynchronize(node);
 
       // Синхронизация
-      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`), 0));
-      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`), 0));
+      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`)), 0);
+      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`)), 0);
     }
 
     /**
@@ -1113,20 +924,14 @@ class graph {
   // Прочитать класс соединения
   get connection() { return this.#connection }
 
-  // Разрешено перемещать узлы?
-  #move = true;
-
-  // Разрешено перемещать камеру? (svg-элементы-соединения - рёбра)
-  #camera = true;
-
   /**
    * Конструктор графика
    *
    * @param {HTMLElement|string} shell HTML-элемент-оболочка для графика, либо его идентификатор
    * @param {boolean} body Перенос работает на теле документа? (иначе на HTML-элементе-оболочке)
-   * @param {boolean} camera Активировать перемещение камеры?
+   * @param {boolean} move Активировать перемещение оболочки?
    */
-  constructor(shell, body = true, camera = true) {
+  constructor(shell, body = true, move = true) {
     // Запись оболочки
     if (shell instanceof HTMLElement) this.#shell = shell;
     else if (typeof shell === 'string') this.#shell = document.getElementById(shell);
@@ -1143,14 +948,14 @@ class graph {
     // Инициализация цели для переноса
     const target = body ? document.body : shell;
 
-    if (camera === true) {
-      // Инициализировать функцию переноса камеры (оболочки)?
+    if (move === true) {
+      // Инициализировать функцию переноса оболочки?
 
       target.onmousedown = (onmousedown) => {
         // Начало переноса
 
-        if (_this.#camera) {
-          // Разрешено двигать камеру (оболочку)
+        if (_this.actions.move.shell) {
+          // Разрешено двигать оболочку
 
           // Запись иконки курсора
           target.style.cursor = 'move';
@@ -1213,13 +1018,13 @@ class graph {
       // Инициализация ссылки на обрабатываемый объект
       const _this = this;
 
-      // Запрет движения камеры при наведении на узел (чтобы двигать узел)
-      node.element.onmouseover = fn => _this.#camera = false;
+      // Запрет движения оболочки при наведении на узел (чтобы двигать узел)
+      node.element.onmouseover = fn => _this.actions.move.shell = false;
 
-      // Снятие запрета движения камеры
-      node.element.onmouseout = fn => _this.#camera = true;
+      // Снятие запрета движения оболочки
+      node.element.onmouseout = fn => _this.actions.move.shell = true;
 
-      if (this.#move) {
+      if (_this.actions.move.node) {
         // Разрешено перемещать узлы
 
         // Инициализация переноса узла
@@ -1232,31 +1037,37 @@ class graph {
           // Позиционирование над остальными узлами
           node.element.style.zIndex = 5000;
 
-          if (!_this.#camera) {
-            // Запрещено двигать камеру (оболочку) (чтобы не двигать узел и камеру одновременно)
+          if (!_this.actions.move.shell) {
+            // Запрещено двигать оболочку (чтобы не двигать узел и оболочку одновременно)
 
             // Инициализация координат
             const n = node.element.getBoundingClientRect();
             const s = _this.shell.getBoundingClientRect();
 
             // Запись слушателя события: "перенос узла"
-            document.onmousemove = (onmousemove) => (
+            document.onmousemove = (onmousemove) => {
               // Сброс данных потока
-              node.reset(),
+              node.reset();
+
+              // Запись статуса о том, что узел в данный момент перемещается
+              node.actions.move.unlimit = true;
 
               // Перемещение узла
-              node.move(onmousemove.pageX - (onmousedown.pageX - n.left + s.left + scrollX), onmousemove.pageY - (onmousedown.pageY - n.top + s.top + scrollY))
-            );
+              node.move(onmousemove.pageX - (onmousedown.pageX - n.left + s.left + scrollX), onmousemove.pageY - (onmousedown.pageY - n.top + s.top + scrollY));
+            };
           }
 
           // Конец переноса узла
-          node.element.onmouseup = fn => (
+          node.element.onmouseup = fn => {
             // Очистка обработчиков событий
-            document.onmousemove = node.element.onmouseup = null,
+            document.onmousemove = node.element.onmouseup = null;
+
+            // Запись статуса о том, что узел в данный момент НЕ перемещается
+            for (const node of _this.nodes) node.actions.move.unlimit = false;
 
             // Возвращение позиционирования
-            node.element.style.zIndex = z
-          );
+            node.element.style.zIndex = z;
+          };
         };
 
         // Перещапись событий браузера (чтобы не дёргалось)
@@ -1265,6 +1076,9 @@ class graph {
 
       // Запись в реестр
       this.nodes.add(node);
+
+      // Обработка взаимодействий с другими узлами
+      node.move();
 
       return node;
     }
@@ -1286,6 +1100,10 @@ class graph {
 
       // Реинициализация узла-получателя
       to.init(1);
+
+      // Синхронизация соединения с узлами
+      connection.synchronize(from);
+      connection.synchronize(to);
 
       return connection;
     }
