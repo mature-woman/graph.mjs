@@ -35,7 +35,7 @@ import Victor from "https://cdn.skypack.dev/victor@1.1.0";
  * // Initializing edges
  * instance.edge(new edge(feet, bebra));
  */
-export default class core {
+export class core {
   /**
    * @name Shell
    *
