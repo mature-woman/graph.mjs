@@ -147,3 +147,9 @@ svg.edge > line {
 ### Result
 ![graph 2.0.0 preview](preview/graph_demonstration_2_0_0.gif)<br><br>
 [Try it on CodePen](https://codepen.io/mirzaev-sexy/pen/Rwyxprz)
+
+## Important fragments of the code
+Iterating over nodes<br>
+![iterating over nodes](preview/code/1.png)<br><br>
+Pushing and pulling<br>
+![pushing and pulling](preview/code/2.png)
