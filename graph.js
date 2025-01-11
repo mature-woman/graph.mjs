@@ -1,1132 +1,1875 @@
 import Victor from "https://cdn.skypack.dev/victor@1.1.0";
 
-'use strict';
+("use strict");
 
 /**
+ * @name Core
+ *
+ * @description
+ * Core of the module for creating graphs
+ *
+ * {@link https://git.mirzaev.sexy/mirzaev/graph.mjs}
+ *
+ * @class
+ * @public
+ *
+ * @license http://www.wtfpl.net/ Do What The Fuck You Want To Public License
  * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
+ *
+ * @example <caption>Creating a simple graph</caption>
+ * // Initializing the graph instance
+ * сonst instance = new graph(document.getElementById('graph'));
+ *
+ * // Writing settings of the graph instance
+ * instance.living = 3000;
+ * instance.camera = true;
+ * instance.operate = true;
+ *
+ * // Initializing nodes
+ * const bebra = instance.node(new node(document.getElementById('bebra')));
+ * const feet = instance.node(new node(document.getElementById('feet')));
+ *
+ * // Writing setting of every node
+ * instance.nodes.forEach((node) => { node.variables.get("inputs").type = "deg" });
+ *
+ * // Initializing edges
+ * instance.edge(new edge(feet, bebra));
  */
-class graph {
-  // Идентификатор HTML-элемента-оболочки (instanceof HTMLElement)
-  #id = 'graph';
+export default class core {
+  /**
+   * @name Shell
+   *
+   * @description
+   * Shell of nodes
+   *
+   * @type {HTMLElement}
+   *
+   * @protected
+   */
+  #shell;
 
-  // Прочитать идентификатор HTML-элемента-оболочки (instanceof HTMLElement)
-  get id() {
-    return this.#id;
-  }
-
-  // Классы которые будут записаны в HTML-элементы
-  classes = {
-    node: {
-      shell: ['nodes'],
-      element: ['node'],
-      onmouseenter: ['onmouseenter'],
-      title: ['title'],
-      cover: ['cover'],
-      description: {
-        both: ['description'],
-        hidden: ['hidden'],
-        shown: ['shown']
-      },
-      close: {
-        both: ['close'],
-        hidden: ['hidden'],
-        shown: ['shown']
-      },
-      wrappers: {
-        both: ['wrapper'],
-        left: ['left'],
-        right: ['right']
-      },
-      animation: ['animation']
-    },
-    connection: {
-      shell: ['connections'],
-      element: ['connection']
-    }
-  };
-
-  // Оболочка (instanceof HTMLElement)
-  #shell = document.getElementById(this.id);
+  /**
+   * @name Shell (get)
+   *
+   * @description
+   * Shell of nodes
+   *
+   * @type {HTMLElement}
+   *
+   * @public
+   */
   get shell() {
     return this.#shell;
   }
 
-  // Реестр узлов
-  #nodes = new Set;
+  /**
+   * @name Left (x-coordinate)
+   *
+   * @type {number} Value in pixels
+   *
+   * @protected
+   */
+  #left;
+
+  /**
+   * @name Left (x-coordinate) (get)
+   *
+   * @description
+   * Getter for `this.#left`
+   *
+   * @type {number} Value in pixels
+   *
+   * @public
+   */
+  get left() {
+    return this.#left;
+  }
+
+  /**
+   * @name Top (y-coordinate)
+   *
+   * @type {number} Value in pixels
+   *
+   * @protected
+   */
+  #top;
+
+  /**
+   * @name Top (y-coordinate) (get)
+   *
+   * @description
+   * Getter for `this.#top`
+   *
+   * @type {number} Value in pixels
+   *
+   * @public
+   */
+  get top() {
+    return this.#top;
+  }
+
+  /**
+   * @name Nodes
+   *
+   * @description
+   * Registry of nodes
+   *
+   * @type {Set}
+   *
+   * @protected
+   */
+  #nodes = new Set();
+
+  /**
+   * @name Nodes (get)
+   *
+   * @description
+   * Getter for `this.#nodes`
+   *
+   * @type {Set}
+   *
+   * @public
+   */
   get nodes() {
     return this.#nodes;
   }
 
-  // Реестр соединений
-  #connections = new Set;
-  get connections() {
-    return this.#connections;
-  }
-
-  // Статус активации функций взаимодействий узлов
-  actions = {
-    pushing: true,
-    pulling: true,
-    move: {
-      shell: true,
-      node: true
-    }
-  }
-
-  // Класс узла
-  #node = class node {
-    // Реестр входящих соединений
-    #inputs = new Set();
-
-    // Прочитать реестр входящих соединений
-    get inputs() { return this.#inputs }
-
-    // Реестр исходящих соединений
-    #outputs = new Set();
-
-    // Прочитать реестр исходящих соединений
-    get outputs() { return this.#outputs }
-
-    // Оператор
-    #operator;
-
-    // Прочитать оператора
-    get operator() { return this.#operator }
-
-    // HTML-элемент-оболочка
-    #shell;
-
-    // Прочитать HTML-элемент-оболочка
-    get shell() { return this.#shell }
-
-    // HTML-элемент
-    #element;
-
-    // Прочитать HTML-элемент
-    get element() { return this.#element }
-
-    // Наблюдатель
-    #observer = null;
-
-    // Прочитать наблюдатель
-    get observer() { return this.#observer }
-
-    // Реестр запрещённых к изменению параметров
-    #block = new Set(['events']);
-
-    // Прочитать реестр запрещённых к изменению параметров
-    get block() { return this.#block }
-
-    // Диаметр узла
-    #diameter = 100;
-
-    // Прочитать диаметр узла
-    get diameter() { return this.#diameter }
-
-    // Степень увеличения диаметра
-    #increase = 0;
-
-    // Прочитать степень увеличения диаметра
-    get increase() { return this.#increase }
-
-    // Величина степени увеличения диаметра
-    #addition = 12;
-
-    // Прочитать величину степени увеличения диаметра
-    get addition() { return this.#addition }
-
-    // Величина степени увеличения притягивания и отталкивания
-    #shift = 0;
-
-    // Прочитать величину степени увеличения притягивания и отталкивания
-    get shift() { return this.#shift }
-
-    /**
-     * Обработка событий
-     *
-     * max - максимум итераций в процессе
-     * current - текущая итерация в процессе
-     */
-    actions = {
-      move: {
-        active: true,
-        unlimit: false
-      },
-      pushing: {
-        active: true,
-        max: 100,
-        current: 0
-      },
-      pulling: {
-        active: true,
-        max: 100,
-        current: 0
-      }
-    };
-
-    /**
-     * Отталкивания
-     *
-     * Реестр узлов которые обработали отталкивание с целевым узлом в потоке
-     */
-    pushings = new Set;
-
-    /**
-     * Притягивания
-     *
-     * Реестр узлов которые обработали притягивание с целевым узлом в потоке
-     */
-    pullings = new Set;
-
-    /**
-     * Расчёт времени анимации
-     */
-    #timing = 'cubic-bezier(0, 1, 1, 1)';
-
-    /**
-     * Прочитать расчёт времени анимации
-     */
-    get timing() { return this.#timing }
-
-    /**
-     * Длительность анимации (в секундах)
-     */
-    #duration = '3';
-
-    /**
-     * Прочитать длительность анимации (в секундах)
-     */
-    get duration() { return this.#duration }
-
-    /**
-     * Анимация (HTMLElement <style>)
-     */
-    #animation;
-
-    /**
-     * Прочитать анимацию (HTMLElement <style>)
-     */
-    get animation() { return this.#animation }
-
-    /**
-     * Троттлинг анимации
-     *
-     * Время после которого будет удалена (готова для перезапуска) анимация при завершении движения узла (остановке)
-     */
-    #throttle = 300;
-
-    /**
-     * Прочитать троттлинг анимации
-     */
-    get throttle() { return this.#throttle }
-
-    /**
-     * Движение
-     */
-    #movement = {
-      status: null,
-      observer: null,
-      from: { x: null, y: null },
-      to: { x: null, y: null }
-    }
-
-    // Прочитать движение
-    get movement() { return this.#movement }
-
-    /**
-     * Конструктор узла
-     *
-     * @param {object} operator Инстанция оператора (графика)
-     * @param {object} data Данные для генерации
-     */
-    constructor(operator, data) {
-      // Запись в свойство
-      this.#operator = operator;
-
-      // Инициализация ссылки на ядро
-      const _this = this;
-
-      // Инициализация HTML-элемента-оболочки узлов
-      if ((this.#shell = document.getElementById(this.#operator.id + '_nodes')) instanceof HTMLElement);
-      else {
-        // Не найден HTML-элемент-оболочки узлов
-
-        // Инициализация HTML-элемента-оболочки узлов
-        const shell = document.createElement('section');
-        shell.id = this.#operator.id + '_nodes';
-        shell.classList.add(...this.#operator.classes.node.shell);
-
-        // Запись в документ
-        this.#operator.shell.appendChild(shell);
-
-        // Запись в свойство
-        this.#shell = shell;
-      }
-
-      // Инициализация HTML-элемента узла
-      const article = document.createElement('article');
-      article.id = this.#operator.id + '_node_' + this.#operator.nodes.size;
-      article.classList.add(..._this.operator.classes.node.element);
-      article.style.animationName = article.id + '_animation';
-      article.style.animationFillMode = 'forwards';
-      article.style.animationDuration = this.#duration + 's';
-      article.style.animationTimingFunction = this.#timing;
-      if (typeof data.color === 'string') article.classList.add(data.color);
-      if (typeof data.href === 'string') article.href = data.href;
-
-
-      // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
-      article.onmouseenter = fn => article.classList.add(..._this.#operator.classes.node.onmouseenter);
-
-      // Инициализация заголовка
-      const title = document.createElement('h4');
-      title.classList.add(..._this.#operator.classes.node.title);
-      title.innerText = data.title ?? '';
-
-      // Запись в оболочку
-      article.appendChild(title);
-
-      // Инициализация описания
-      const description = document.createElement('div');
-      description.classList.add(..._this.#operator.classes.node.description.both, ..._this.#operator.classes.node.description.hidden);
-      if (typeof data.popup === 'string') description.title = data.popup;
-
-      // Запись анимации "выделение обводкой" (чтобы не проигрывалась при открытии страницы)
-      description.onmouseenter = fn => description.classList.add(..._this.#operator.classes.node.onmouseenter);
-
-      // Инициализация блокировки открытия описания в случае, если был перемещён узел
-      title.onmousedown = (onmousedown) => {
-        // Инициализация координат
-        let x = onmousedown.pageX;
-        let y = onmousedown.pageY;
-
-        title.onclick = (onclick) => (_this.show(), title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-
-        title.onmousemove = (onmousemove) => {
-          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать открытие описания
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (title.style.cursor = 'grabbing', title.onclick = (onclick) => (title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
-          else title.onclick = (onclick) => (_this.show(), title.onclick = title.onmousemove = title.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-        }
-      };
-
-      // Запись в оболочку
-      article.appendChild(description);
-
-      // Инициализация левой фигуры для обёртки текста
-      const left = document.createElement('span');
-      left.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.left);
-
-      // Запись в описание
-      description.appendChild(left);
-
-      // Инициализация правой фигуры для обёртки текста
-      const right = document.createElement('span');
-      right.classList.add(..._this.#operator.classes.node.wrappers.both, ..._this.#operator.classes.node.wrappers.right);
-
-      // Запись в описание
-      description.appendChild(right);
-
-      // Инициализация ссылки на источник
-      const a = document.createElement('a');
-      if (typeof data.link === 'object' && typeof data.link.name === 'string') a.innerText = data.link.name;
-      if (typeof data.link === 'object' && typeof data.link.href === 'string') a.href = data.link.href;
-      if (typeof data.link === 'object' && typeof data.link.class === 'object') a.classList.add(...data.link.class);
-      if (typeof data.link === 'object' && typeof data.link.title === 'string') a.title = data.link.title;
-
-      // Блокировка событий браузера (чтобы не мешать переноса узла)
-      a.ondragstart = a.onselectstart = fn => false;
-
-      // Инициализация блокировки перехода по ссылке в случае, если был перемещён узел
-      a.onmousedown = (onmousedown) => {
-        // Инициализация координат
-        let x = onmousedown.pageX;
-        let y = onmousedown.pageY;
-
-        a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-
-        a.onmousemove = (onmousemove) => {
-          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать переход по ссылке
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (a.style.cursor = 'grabbing', a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
-          else a.onclick = (onclick) => (a.onclick = a.onmousemove = a.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-        }
-      };
-
-      // Запись в описание
-      description.appendChild(a);
-
-      // Запись текста в описание
-      const text = document.createElement('p');
-      if (typeof data.description === 'string') text.innerText = data.description;
-
-      // Запись в оболочку
-      description.appendChild(text);
-
-      if (typeof data.cover === 'string') {
-        // Получено изображение-обложка
-
-        // Инициализация изображения-обложки
-        const cover = document.createElement('img');
-        if (typeof cover.src === 'string') cover.src = data.cover;
-        if (typeof cover.alt === 'string') cover.alt = data.title;
-        cover.classList.add(..._this.#operator.classes.node.cover);
-
-        // Запись в описание
-        description.appendChild(cover);
-      }
-
-      // Запись в оболочку
-      if (typeof data.append === 'HTMLCollection' || typeof data.append === 'HTMLElement') article.appendChild(data.append);
-
-      // Инициализация кнопки закрытия
-      const close = document.createElement('i');
-      close.classList.add(..._this.#operator.classes.node.close.both, ..._this.#operator.classes.node.close.hidden);
-
-      // Запись блокировки закрытия описания в случае, если был перемещён узел
-      close.onmousedown = (onmousedown) => {
-        // Инициализация координат
-        let x = onmousedown.pageX;
-        let y = onmousedown.pageY;
-
-        close.onclick = (onclick) => (_this.hide(), close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-
-        close.onmousemove = (onmousemove) => {
-          // Если курсор движется более чем на 15 пикселей по вертикали или горизонтали, то блокировать закрытие описания
-          if (Math.abs(x - onmousemove.pageX) > 15 || Math.abs(y - onmousemove.pageY) > 15) (close.style.cursor = 'grabbing', close.onclick = (onclick) => (close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, false));
-          else close.onclick = (onclick) => (_this.hide(), close.onclick = close.onmousemove = close.style.cursor = null, x = onclick.pageX, y = onclick.pageY, true);
-        }
-      };
-
-      // Запись в оболочку
-      article.appendChild(close);
-
-      // Запись в документ
-      this.#shell.appendChild(article);
-
-      // Запись диаметра описания в зависимости от размера заголовка (чтобы вмещался)
-      description.style.width = description.style.height = (a.offsetWidth === 0 ? 50 : a.offsetWidth) * 3 + 'px';
-
-      // Запись отступа заголовка (чтобы был по центру описания)
-      a.style.left = description.offsetWidth / 2 - a.offsetWidth / 2 + 'px';
-
-      // Запись в свойство
-      this.#element = article;
-
-      // Инициализация
-      this.init();
-
-      /**
-       * Показать описание
-       */
-      this.show = fn => {
-        // Отображение описания
-        description.classList.add(..._this.#operator.classes.node.description.shown);
-        description.classList.remove(..._this.#operator.classes.node.description.hidden);
-
-        // Отображение кнопки закрытия
-        close.classList.add(..._this.#operator.classes.node.close.shown);
-        close.classList.remove(..._this.#operator.classes.node.close.hidden);
-
-        // Сдвиг кнопки закрытия описания
-        close.style.top = close.style.right = -(((description.offsetWidth - article.offsetWidth) / 4) + description.offsetWidth / 8) + 'px';
-
-        // Размер кнопки закрытия описания
-        close.style.scale = 1.3;
-
-        // Прозрачность кнопки закрытия описания (плавное появление)
-        close.style.opacity = 1;
-
-        // Расположение выше остальных узлов
-        article.style.zIndex = close.style.zIndex = 1000;
-
-        // Инициализация сдвига отталкивания и притяжения соединённых узлов
-        _this.#shift = description.offsetWidth - article.offsetWidth;
-
-        // Сброс данных потока
-        _this.reset();
-
-        // Обработка сдвига
-        _this.move();
-      }
-
-      /**
-       * Скрыть описание
-       */
-      this.hide = fn => {
-        // Скрытие описания
-        description.classList.add(..._this.#operator.classes.node.description.hidden);
-        description.classList.remove(..._this.#operator.classes.node.description.shown);
-
-        // Скрытие кнопки закрытия
-        close.classList.add(..._this.#operator.classes.node.close.hidden);
-        close.classList.remove(..._this.#operator.classes.node.close.shown);
-
-        // Удаление всех изменённых аттрибутов
-        close.style.top = close.style.right = article.style.zIndex = close.style.zIndex = close.style.scale = close.style.opacity = null;
-
-        // Деинициализация сдвига отталкивания и притяжения соединённых узлов
-        _this.#shift = 0;
-
-        // Сброс данных потока
-        _this.reset();
-
-        // Обработка сдвига
-        _this.move();
-      }
-
-      // Запись в реестр
-      this.#operator.nodes.add(this);
-
-      // Инициализация координат центров
-      const horizontal = this.#operator.shell.offsetWidth / 2 - this.#diameter / 2;
-      const vertical = this.#operator.shell.offsetHeight / 2 - this.#diameter / 2;
-
-      // Инициализация начальных координат
-      this.element.style.left = this.#movement.from.x = horizontal + (0.5 - Math.random()) * 500 + 'px';
-      this.element.style.top = this.#movement.from.y = vertical + (0.5 - Math.random()) * 500 + 'px';
-
-      // Перемещение
-      this.move(horizontal + (0.5 - Math.random()) * 500, vertical + (0.5 - Math.random()) * 500);
-    }
-
-    init(increase = 0) {
-      // Запись в свойство
-      this.#increase = increase;
-
-      // Инициализация диаметра
-      if (this.#increase !== 0) this.#diameter += this.#addition ** this.#increase;
-
-      // Инициализация размера HTML-элемента
-      this.element.style.width = this.element.style.height = this.#diameter + 'px';
-
-      // Инициализация описания
-      const description = this.element.getElementsByClassName('description')[0];
-
-      // Запись отступа описания (чтобы был по центру узла)
-      description.style.marginLeft = description.style.marginTop = (this.element.offsetWidth - description.offsetWidth) / 2 + 'px';
-    }
-
-    /**
-     * Переместить узел
-     *
-     * @param {*} x Координата X (относительно левого верхнего края)
-     * @param {*} y Координата Y (относительно левого верхнего края)
-     *
-     * @return {bool} Статус выполнения
-     */
-    move(x, y) {
-      if (!this.actions.move.active) return false;
-
-      // Инициализация конечных координат
-      (this.#movement.to.x ??= this.#element.offsetLeft, this.#movement.to.y ??= this.#element.offsetTop);
-
-      // Проверка входящих параметров
-      if (typeof x !== 'number' || typeof y !== 'number') (x = this.#movement.to.x, y = this.#movement.to.y);
-
-      // Округление координат
-      (x = Math.round(x), y = Math.round(y));
-
-      if (this.#movement.status !== 'completed') {
-        // Не завершено движение
-
-        // Запись начальных координат
-        this.#movement.from = { x: this.#element.offsetLeft, y: this.#element.offsetTop };
-
-        // Запись наблюдателя для проверки того, что движение было завершено
-        if (this.#movement.observer === null) this.#movement.observer = setInterval(fn => {
-          if (this.#element.offsetLeft === this.#movement.to.x && this.#element.offsetTop === this.#movement.to.y) {
-            // Завершено движение
-
-            // Запись координат
-            (this.element.style.left = this.#movement.to.x + 'px', this.element.style.top = this.#movement.to.y + 'px');
-
-            // Удаление координат движения
-            this.#movement.from = this.#movement.to;
-
-            // Запись статуса
-            this.#movement.status = 'completed';
-
-            // Удаление анимации (для того, чтобы запустить её с начала)
-            if (this.#animation instanceof HTMLElement) setTimeout((this.#animation.remove(), this.#animation = undefined), this.#throttle);
-
-            // Сброс счётчиков
-            this.actions.pushing.current = this.actions.pulling.current = 0;
-
-            // Десинхронизация узла с его соединениями
-            for (const connection of this.#inputs) connection.desynchronize(this);
-            for (const connection of this.#outputs) connection.desynchronize(this);
-
-            // Сброс данных потока
-            this.reset();
-
-            // Удаление наблюдателя
-            (clearInterval(this.#movement.observer), this.#movement.observer = null);
-          }
-        }, 10);
-      }
-
-      // Запись статуса
-      this.#movement.status = 'moving';
-
-      // Запись конечных координат движения
-      this.#movement.to = { x, y };
-
-      if (typeof this.#animation === 'undefined') {
-        // Не найден HTML-элемент с анимацией
-
-        // Инициализация HTML-элемента с анимацией
-        const style = document.createElement('style');
-        style.id = this.element.id + '_animation';
-        style.classList.add(...this.operator.classes.node.animation);
-
-        // Запись в документ
-        this.#element.appendChild(style);
-
-        // Запись в свойство
-        this.#animation = style;
-      }
-
-      // Запись анимации
-      this.#animation.innerHTML = `@keyframes ${this.#animation.id} {0% { left: ${this.#movement.from.x}px; top: ${this.#movement.from.y}px; } 100% { left: ${this.#movement.to.x}px; top: ${this.#movement.to.y}px; }}`;
-
-      // Инициализация буфера реестра узлов
-      const registry = new Set(this.#operator.nodes);
-
-      if (this.pushings && !this.pushings.has(this)) {
-        // Активно отталкивание
-
-        // Обработка отталкивания
-        for (const connection of this.outputs) (registry.delete(connection.to), this.pushing(new Set([connection.to])));
-        for (const connection of this.inputs) (registry.delete(connection.from), this.pushing(new Set([connection.from])));
-      }
-
-      if (this.pullings && !this.pullings.has(this)) {
-        // Активно притягивание
-
-        // Обработка притягивания
-        for (const connection of this.outputs) (registry.delete(connection.to), this.pulling(new Set([connection.to])));
-        for (const connection of this.inputs) (registry.delete(connection.from), this.pulling(new Set([connection.from])));
-      }
-
-      // Обработка отталкивания остальных узлов
-      if (this.pushings) this.pushing(registry);
-
-      // Синхронизация узла с его соединениями
-      for (const connection of this.outputs) connection.synchronize(this);
-      for (const connection of this.inputs) connection.synchronize(this);
-    }
-
-    /**
-     * Обработать отталкивания
-     *
-     * @param {*} nodes
-     * @param {*} add
-     * @param {*} distance
-     *
-     * @returns
-     */
-    pushing(nodes = [], add, distance = 100) {
-      // Проверка на активность отталкивания целевого узла
-      if (!this.#operator.actions.pushing || !this.actions.pushing.active) return false;
-
-      // Инициализация буфера реестра узлов
-      const registry = new Set(nodes);
-
-      // Удаление текущего узла из буфера
-      registry.delete(this);
-
-      for (const node of registry) {
-        // Перебор обрабатываемых узлов
-
-        if (this.actions.move.unlimit) {
-          // Перемещается мышью узел
-
-          // Запись о том, что узел перемещается мышью (каскадно)
-          node.actions.move.unlimit = true;
-        } else {
-          // Не перемещается мышью узел
-
-          // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
-          if (++this.actions.pushing.current > this.actions.pushing.max) return false;
-
-          // Проверка на превышение ограничения по числу итераций для отталкивания у целевого узла
-          if (++node.actions.pushing.current > node.actions.pushing.max) continue;
-        }
-
-        // Проверка на активность отталкивания у целевого узла
-        if (!this.#operator.actions.pushing || !this.actions.pushing.active) return false;
-
-        // Проверка на активность отталкивания у обрабатываемого узла
-        if (!node.#operator.actions.pushing || !node.actions.pushing.active) continue;
-
-        // Защита от повторной обработки обрабатываемого узла
-        if (typeof this.pushings === 'object' && this.pushings.has(node)) continue;
-        else this.pushings.add(node);
-
-        // Инициализация вектора между узлами
-        const between = new Victor(node.element.offsetLeft - this.element.offsetLeft, node.element.offsetTop - this.element.offsetTop);
-
-        // Вычисление разницы между необходимым расстоянием и текущим
-        const difference = (this.diameter + node.diameter) / 2 + distance + this.shift + node.shift + (typeof add === 'number' ? add : 0) - between.length();
-
-        // Узлы преодолели расстояние отталкивания?
-        if (difference <= 0) continue;
-
-        // Реинициализация реестра обработанных узлов и запись целевого узла
-        node.pushings = new Set([this]);
-
-        // Инициализация вектора целевой позиции для перемещения
-        const target = new Victor(difference, difference);
-
-        // Инициализация вектора новой позиции обрабатываемого узла
-        const vector = new Victor(node.element.offsetLeft, node.element.offsetTop).add(target.rotate(between.angle() - target.angle()));
-
-        // Перемещение
-        node.move(vector.x, vector.y);
-      }
-    }
-
-    /**
-     * Обработать притягивания
-     *
-     * @param {*} nodes
-     * @param {*} add
-     * @param {*} distance
-     *
-     * @returns
-     */
-    pulling(nodes = [], add, distance = 150) {
-      // Проверка на активность притягивания целевого узла
-      if (!this.#operator.actions.pulling || !this.actions.pulling.active) return false;
-
-      // Инициализация буфера реестра узлов
-      const registry = new Set(nodes);
-
-      // Удаление текущего узла из буфера
-      registry.delete(this);
-
-      for (const node of registry) {
-        // Перебор обрабатываемых узлов
-
-        if (this.actions.move.unlimit) {
-          // Перемещается мышью узел
-
-          // Запись о том, что узел перемещается мышью (каскадно)
-          node.actions.move.unlimit = true;
-        } else {
-          // Не перемещается мышью узел
-
-          // Проверка на превышение ограничения по числу итераций для притягивания у целевого узла
-          if (++this.actions.pulling.current > this.actions.pulling.max) return false;
-
-          // Проверка на превышение ограничения по числу итераций для притягивания у целевого узла
-          if (++node.actions.pulling.current > node.actions.pulling.max) continue;
-        }
-
-        // Проверка на активность отталкивания у целевого узла
-        if (!this.#operator.actions.pulling || !this.actions.pulling.active) return false;
-
-        // Проверка на активность отталкивания у обрабатываемого узла
-        if (!node.#operator.actions.pulling || !node.actions.pulling.active) continue;
-
-        // Защита от повторной обработки целевого узла
-        if (typeof this.pullings === 'object' && this.pullings.has(node)) continue;
-        else this.pullings.add(node);
-
-        // Инициализация вектора между узлами
-        const between = new Victor(node.element.offsetLeft - this.element.offsetLeft, node.element.offsetTop - this.element.offsetTop);
-
-        // Вычисление разницы между необходимым расстоянием и текущим
-        const difference = (node.diameter + this.diameter) / 2 + distance + this.shift + node.shift + (typeof add === 'number' ? add : 0) - between.length();
-
-        // Узлы преодолели расстояние отталкивания?
-        if (difference > 0) continue;
-
-        // Реинициализация реестра обработанных узлов и запись целевого узла
-        node.pullings = new Set([this]);
-
-        // Инициализация вектора целевой позиции для перемещения
-        const target = new Victor(difference, difference);
-
-        // Инициализация координат обрабатываемого узла
-        const vector = new Victor(node.element.offsetLeft, node.element.offsetTop).add(target.rotate(between.angle() - target.angle()).invert());
-
-        // Перемещение узла
-        node.move(vector.x, vector.y);
-      }
-    }
-
-    /**
-     * Сброс данных потока
-     */
-    reset = fn => {
-      // Реинициализация реестров обработанных узлов
-      this.pushings = this.#operator.actions.pushing ? new Set() : null;
-      this.pullings = this.#operator.actions.pulling ? new Set() : null;
-
-      // Реинициализация счётчиков итераций
-      this.actions.pushing.current = this.actions.pulling.current = 0;
-    }
-  };
-
-  // Прочитать класс узла
-  get node() { return this.#node }
-
-  // Класс соединения
-  #connection = class connection {
-    // HTML-элемент-оболочка
-    #shell;
-
-    // Прочитать HTML-элемент-оболочку
-    get shell() { return this.#shell }
-
-    // HTML-элемент соединения
-    #element;
-
-    // Прочитать HTML-элемент соединения
-    get element() { return this.#element }
-
-    // Инстанция this.operator.node от которой начинается соединение
-    #from;
-
-    // Прочитать инстанцию this.operator.node от которой начинается соединение
-    get from() { return this.#from }
-
-    // Инстанция this.operator.node на которой заканчивается соединение
-    #to;
-
-    // Прочитать инстанцию this.operator.node на которой заканчивается соединение
-    get to() { return this.#to }
-
-    // Оператор
-    #operator;
-
-    // Прочитать оператора
-    get operator() { return this.#operator }
-
-    // Сессии синхронизации позиции узлов с соединениями
-    #sessions = new Map;
-
-    // Прочитать сессии синхронизации позиции узлов с соединениями
-    get sessions() { return this.#sessions }
-
-    // Координата X (основной узел)
-    #x1;
-
-    // Прочитать координату X (основной узел)
-    get x1() { return this.#x1 }
-
-    // Координата Y (основной узел)
-    #y1;
-
-    // Прочитать координату Y (основной узел)
-    get y1() { return this.#y1 }
-
-    // Координата X (связанный узел)
-    #x2;
-
-    // Прочитать координату X (связанный узел)
-    get x2() { return this.#x2 }
-
-    // Координата X (связанный узел)
-    #y2;
-
-    // Прочитать координату X (связанный узел)
-    get y2() { return this.#y2 }
-
-    // Дата окончания синхронизации
-    #data = Date.now();
-
-    // Прочитать дату окончания синхронизации
-    get data() { return this.#data }
-
-    // Таймер синхронизации (в милисекундах)
-    #timer = 5000;
-
-    // Прочитать таймер синхронизации (в милисекундах)
-    get timer() { return this.#timer }
-
-    /**
-     * Конструктор соединения
-     *
-     * @param {object} operator Инстанция оператора (графика)
-     * @param {object} from Инстанция узла от которого идёт соединение
-     * @param {object} to Инстанция узла к которому идёт соединения
-     */
-    constructor(operator, from, to) {
-      // Запись свойства
-      this.#operator = operator;
-
-      // Запись свойства
-      this.#from = from;
-
-      // Запись свойства
-      this.#to = to;
-
-      // Инициализация HTML-элемента-оболочки соединений
-      if ((this.#shell = document.getElementById(this.#operator.id + '_connections')) instanceof SVGElement);
-      else {
-        // Не найден HTML-элемент-оболочки соединений
-
-        // Инициализация HTML-элемента-оболочки соединений
-        const shell = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        shell.id = this.#operator.id + '_connections';
-        shell.classList.add(...this.#operator.classes.connection.shell);
-
-        // Запись в документ
-        this.#operator.shell.appendChild(shell);
-
-        // Запись в свойство
-        this.#shell = shell;
-      }
-
-      // Инициализация координат
-      (this.#x1 = from.element.offsetLeft + from.element.offsetWidth / 2, this.#y1 = from.element.offsetTop + from.element.offsetHeight / 2, this.#x2 = to.element.offsetLeft + to.element.offsetWidth / 2, this.#y2 = to.element.offsetTop + to.element.offsetHeight / 2);
-
-      // Инициализация оболочки
-      const line = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'path'
-      );
-      line.setAttribute('d', `M${this.x1} ${this.y1} L${this.x2} ${this.y2}`);
-      line.setAttribute('stroke', 'grey');
-      line.setAttribute('stroke-width', '8px');
-      line.id = this.#operator.id + '_connection_' + this.#operator.connections.size;
-      line.classList.add(...this.operator.classes.connection.element);
-      line.setAttribute('data-from', from.element.id);
-      line.setAttribute('data-to', to.element.id);
-
-      // Запись в оболочку
-      this.shell.append(line);
-
-      // Запись в свойство
-      this.#element = line;
-
-      // Запись в реестр
-      this.#operator.connections.add(this);
-    }
-
-    /**
-     * Синхронизировать c узлом
-     *
-     * @param {node} node Инстанция узла (связанного с соединением)
-     */
-    synchronize(node) {
-      // Десинхронизация
-      this.desynchronize(node);
-
-      // Инициализация времени работы синхронизации
-      this.#data = Date.now() + this.#timer;
-
-      // Синхронизация
-      if (node === this.from) this.#sessions.set(node.element.id, setInterval(fn =>  Date.now() < this.#data ? this.element.setAttribute('d', `M${this.#x1 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y1 = node.element.offsetTop + node.element.offsetHeight / 2} L${this.#x2} ${this.#y2}`) : this.desynchronize(node)), 0);
-      else if (node === this.to) this.#sessions.set(node.element.id, setInterval(fn => Date.now() < this.#data ? this.element.setAttribute('d', `M${this.#x1} ${this.#y1} L${this.#x2 = node.element.offsetLeft + node.element.offsetWidth / 2} ${this.#y2 = node.element.offsetTop + node.element.offsetHeight / 2}`) : this.desynchronize(node)), 0);
-    }
-
-    /**
-     * Десинхронизировать c узлом
-     *
-     * @param {node} node Инстанция узла (связанного с соединением)
-     */
-    desynchronize(node) {
-      // Удаление интервала
-      clearInterval(this.#sessions.get(node.element.id));
-    }
-  };
-
-  // Прочитать класс соединения
-  get connection() { return this.#connection }
+  /**
+   * @name Edges
+   *
+   * @description
+   * Registry of edges
+   *
+   * @type {Set}
+   *
+   * @protected
+   */
+  #edges = new Set();
 
   /**
-   * Конструктор графика
+   * @name Edges (get)
    *
-   * @param {HTMLElement|string} shell HTML-элемент-оболочка для графика, либо его идентификатор
-   * @param {boolean} body Перенос работает на теле документа? (иначе на HTML-элементе-оболочке)
-   * @param {boolean} move Активировать перемещение оболочки?
+   * @description
+   * Getter for `this.#edges`
+   *
+   * @type {Set}
+   *
+   * @public
    */
-  constructor(shell, body = true, move = true) {
-    // Запись оболочки
-    if (shell instanceof HTMLElement) this.#shell = shell;
-    else if (typeof shell === 'string') this.#shell = document.getElementById(shell);
+  get edges() {
+    return this.#edges;
+  }
 
-    // Проверка на инициализированность HTML-элемента-оболочки
-    if (typeof this.#shell === undefined) return false;
-
-    // Запись идентификатора
-    this.#id = this.#shell.id;
-
-    // Инициализация ссылки на обрабатываемый объект
-    const _this = this;
-
-    // Инициализация цели для переноса
-    const target = body ? document.body : shell;
-
-    if (move === true) {
-      // Инициализировать функцию переноса оболочки?
-
-      target.onmousedown = (onmousedown) => {
-        // Начало переноса
-
-        if (_this.actions.move.shell) {
-          // Разрешено двигать оболочку
-
-          // Запись иконки курсора
-          target.style.cursor = 'move';
-
-          // Инициализация координат
-          const coords = _this.shell.getBoundingClientRect();
-          const x = onmousedown.pageX - coords.left + scrollX;
-          const y = onmousedown.pageY - coords.top + scrollY;
-
-          // Инициализация HTML-элемента-оболочки соединений
-          const connections = document.getElementById(_this.#id + '_connections');
-
-          // Инициализация функции переноса полотна
-          function move(onmousemove) {
-            // Инициализация буфера
-            let buffer;
-
-            // Запись нового отступа от лева для HTML-элемента оболочки графика
-            _this.shell.style.left = (buffer = onmousemove.pageX - x) + 'px';
-
-            // Запись нового отступа от лева для HTML-элемента оболочки соединений
-            connections.style.left = -buffer + 'px';
-
-            // Запись аттрибута с координатами для HTML-элемента оболочки соединений
-            connections.setAttribute('data-x', -buffer);
-
-            // Запись нового отступа от верха для HTML-элемента оболочки графика
-            _this.shell.style.top = (buffer = onmousemove.pageY - y) + 'px';
-
-            // Запись нового отступа от верха для HTML-элемента оболочки соединений
-            connections.style.top = -buffer + 'px';
-
-            // Запись аттрибута с координатами для HTML-элемента оболочки соединений
-            connections.setAttribute('data-y', -buffer);
-
-            // Синхронизация
-            for (const connection of _this.connections) (connection.synchronize(connection.from), connection.synchronize(connection.to));
-          }
-
-          // Запись слушателя события: "перенос полотна"
-          target.onmousemove = move;
+  /**
+   * @name Interactions
+   *
+   * @description
+   * Settings of interactions
+   *
+   * @type {object}
+   *
+   * @property {object} moving
+   *
+   * @property {object} moving.graph
+   * @property {boolean} moving.graph.active
+   * @property {object} moving.graph.inertion
+   * @property {boolean} moving.graph.inertion.active
+   *
+   * @property {object} moving.nodes
+   * @property {boolean} moving.nodes.active
+   * @property {object} moving.nodes.inertion
+   * @property {boolean} moving.nodes.inertion.active
+   *
+   * @property {object} pushing
+   *
+   * @property {boolean} pushing.active
+   * @property {object} pushing.iterations
+   * @property {number} pushing.iterations.from
+   * @property {number} pushing.iterations.to
+   *
+   * @property {object} pulling
+   *
+   * @property {boolean} pulling.active
+   * @property {object} pulling.iterations
+   * @property {number} pulling.iterations.from
+   * @property {number} pushing.iterations.to
+   *
+   * @protected
+   */
+  interactions = {
+    moving: {
+      graph: {
+        active: true,
+        inertion: {
+          active: true
         }
+      },
+      nodes: {
+        active: true,
+        inertion: {
+          active: true
+        }
+      }
+    },
+    pushing: {
+      active: true,
+      iterations: {
+        from: 0,
+        to: 100
+      },
+      cascade: {
+        depth: 3
+      }
+    },
+    pulling: {
+      active: true,
+      iterations: {
+        from: 0,
+        to: 100
+      },
+      cascade: {
+        depth: 3
+      }
+    }
+  };
 
-        // Конец переноса (деинициализация)
-        target.onmouseup = () => target.onmousemove = target.onmouseup = target.style.cursor = null;
-      };
+  /**
+   * @name Living
+   *
+   * @description
+   * Interval to execute `this.move` to fix positioning errors
+   *
+   * @type {number} Value in milliseconds (`0` or `undefined` to disable)
+   *
+   * @protected
+   */
+  #living;
 
-      // Блокировка событий браузера (чтобы не дёргалось)
-      target.ondragstart = null;
+  /**
+   * @name Living (set)
+   *
+   * @description
+   * Setter for `this.#living`
+   * Reinitializes the `this.#processes.get('living')` process
+   *
+   * @param {number} value Interval value in milliseconds (`0` or `undefined` to disable)
+   *
+   * @public
+   */
+  set living(value) {
+    if (typeof value === "number" || typeof value === "undefined") {
+      // Validated required argument
 
-      // Каждые 3 секунды обрабатывать взаимодействия между узлами
-      setInterval(fn => { for (const node of _this.nodes) node.move() }, 3000);
+      // Writing value to the living property
+      this.#living = value;
+
+      // Deinitializing living process
+      clearInterval(this.#processes.get("living"));
+
+      // Initializing link to the instance
+      const instance = this;
+
+      // Initializing living process
+      if (typeof this.#living === "number" && this.#living !== 0)
+        this.#processes.set(
+          "living",
+          setInterval(() => {
+            for (const node of this.#nodes) {
+              // Iterating over nodes
+
+              // Processing pushings between nodes
+              node.push(
+                instance.interactions.pushing.cascade.depth,
+                instance.nodes
+              );
+
+              // Processing pullings between nodes
+              node.pull(instance.interactions.pulling.cascade.depth);
+            }
+          }, this.#living)
+        );
     }
   }
 
-  write = (data = {}) => {
-    if (typeof data === 'object') {
-      // Получен обязательный входной параметр в правильном типе
+  /**
+   * @name Living (get)
+   *
+   * @description
+   * Getter for `this.#living`
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  get living() {
+    return this.#living;
+  }
 
-      // Инициализация узла
-      const node = new this.node(this, data);
+  /**
+   * @name Camera
+   *
+   * @description
+   * Allowed to moving the shell (like an abstract camera)?
+   *
+   * @type {boolean}
+   *
+   * @protected
+   */
+  #camera = false;
 
-      // Инициализация ссылки на обрабатываемый объект
-      const _this = this;
+  /**
+   * @name Camera (set)
+   *
+   * @description
+   * Setter for `this.#camera`
+   * Reinitializes camera moving processes
+   *
+   * @param {boolean} value Activate moving the shell (like an abstract camera)?
+   *
+   * @public
+   */
+  set camera(value) {
+    if (typeof value === "boolean") {
+      // Validated required argument
 
-      // Запрет движения оболочки при наведении на узел (чтобы двигать узел)
-      node.element.onmouseover = fn => _this.actions.move.shell = false;
+      // Writing value to the camera property
+      this.#camera = value;
 
-      // Снятие запрета движения оболочки
-      node.element.onmouseout = fn => _this.actions.move.shell = true;
+      if (this.#camera) {
+        // Activated moving the shell (like an abstract camera)
 
-      if (_this.actions.move.node) {
-        // Разрешено перемещать узлы
+        // Deinitializing the "dragstart" and the "selectstart" event listeners
+        this.#shell.ondragstart = this.#shell.onselectstart = null;
 
-        // Инициализация переноса узла
-        node.element.onmousedown = (onmousedown) => {
-          // Начало переноса узла
+        // Initializing link to the instance
+        const instance = this;
 
-          // Инициализация буфера позиционирования
-          const z = node.element.style.zIndex;
+        // Disconnecting deprecated event listener for starting moving the shell element
+        document.removeEventListener(
+          "mousedown",
+          this.#listeners.get("camera.start")
+        );
 
-          // Позиционирование над остальными узлами
-          node.element.style.zIndex = 5000;
+        // Initializing event listener for starting moving the shell
+        this.#listeners.set("camera.start", (start) => {
+          // Started moving the shell
 
-          if (!_this.actions.move.shell) {
-            // Запрещено двигать оболочку (чтобы не двигать узел и оболочку одновременно)
+          if (
+            start.target === instance.#shell ||
+            !instance.#shell.contains(event.target)
+          ) {
+            // The mouse cursor is down over the shell element or its ascendant element
 
-            // Инициализация координат
-            const n = node.element.getBoundingClientRect();
-            const s = _this.shell.getBoundingClientRect();
+            // Initializing coordinates of the shell element
+            const left = start.pageX - instance.#shell.offsetLeft + pageXOffset;
+            const top = start.pageY - instance.#shell.offsetTop + pageYOffset;
 
-            // Запись слушателя события: "перенос узла"
-            document.onmousemove = (onmousemove) => {
-              // Сброс данных потока
-              node.reset();
+            // Disconnecting deprecated event listener for moving the shell element
+            document.removeEventListener(
+              "mousemove",
+              instance.#listeners.get("camera.moving")
+            );
 
-              // Запись статуса о том, что узел в данный момент перемещается
-              node.actions.move.unlimit = true;
+            // Initializing event listener for moving the shell element
+            this.#listeners.set("camera.moving", (moving) => {
+              // Moving the shell
 
-              // Перемещение узла
-              node.move(onmousemove.pageX - (onmousedown.pageX - n.left + s.left + scrollX), onmousemove.pageY - (onmousedown.pageY - n.top + s.top + scrollY));
-            };
+              // Writing x-coordinate into the property
+              instance.#left = moving.pageX - left;
+
+              // Writing y-coordinate into the property
+              instance.#top = moving.pageY - top;
+
+              // Writing x-coordinate into the HTML-element attribute
+              if (instance.variables.get("left").active)
+                instance.#shell.style.setProperty(
+                  "--graph-shell-left",
+                  instance.#left + instance.variables.get("left").type
+                );
+
+              // Writing y-coordinate into the HTML-element attribute
+              if (instance.variables.get("top").active)
+                instance.#shell.style.setProperty(
+                  "--graph-shell-top",
+                  instance.#top + instance.variables.get("top").type
+                );
+            });
+
+            // Connecting event listener for moving the shell element
+            document.addEventListener(
+              "mousemove",
+              instance.#listeners.get("camera.moving")
+            );
           }
+        });
 
-          // Конец переноса узла
-          node.element.onmouseup = fn => {
-            // Очистка обработчиков событий
-            document.onmousemove = node.element.onmouseup = null;
+        // Connecting event listener for starting moving the shell element
+        document.addEventListener(
+          "mousedown",
+          this.#listeners.get("camera.start")
+        );
 
-            // Запись статуса о том, что узел в данный момент НЕ перемещается
-            for (const node of _this.nodes) node.actions.move.unlimit = false;
+        // Disconnecting deprecated event listener for ending moving the shell element
+        document.removeEventListener(
+          "mouseup",
+          this.#listeners.get("camera.end")
+        );
 
-            // Обработка взаимодействий между всеми узлами
-            for (const node of _this.nodes) node.move();
+        // Initializing event listener for ending moving the shell
+        this.#listeners.set("camera.end", (end) => {
+          // Ended moving the shell
 
-            // Возвращение позиционирования
-            node.element.style.zIndex = z;
-          };
-        };
+          // Disconnecting event listener for moving the shell element
+          document.removeEventListener(
+            "mousemove",
+            instance.#listeners.get("camera.moving")
+          );
+        });
 
-        // Перещапись событий браузера (чтобы не дёргалось)
-        node.element.ondragstart = null;
+        // Connecting event listener for ending moving the shell element
+        document.addEventListener("mouseup", this.#listeners.get("camera.end"));
+      } else {
+        // Deactivated moving the shell (like an abstract camera)
+
+        // Disconnecting event listener for starting moving the shell element
+        document.removeEventListener(
+          "mousedown",
+          this.#listeners.get("camera.start")
+        );
+
+        // Disconnecting event listener for ending moving the shell element
+        document.removeEventListener(
+          "mouseup",
+          this.#listeners.get("camera.end")
+        );
+
+        // Disconnecting event listener for moving the shell element
+        document.removeEventListener(
+          "mousemove",
+          this.#listeners.get("camera.moving")
+        );
       }
-
-      // Запись в реестр
-      this.nodes.add(node);
-
-      // Обработка взаимодействий с другими узлами
-      node.move();
-
-      return node;
     }
-  };
+  }
 
-  connect = (from, to) => {
-    if (from instanceof this.node && to instanceof this.node) {
-      // Получены обязательные входные параметры в правильном типе
+  /**
+   * @name Camera (get)
+   *
+   * @description
+   * Getter for `this.#camera`
+   *
+   * @type {boolean}
+   *
+   * @public
+   */
+  get camera() {
+    return this.#camera;
+  }
 
-      // Инициализация соединения
-      const connection = new this.connection(this, from, to);
+  /**
+   * @name Operate
+   *
+   * @description
+   * Allowed to operate with nodes?
+   *
+   * @type {boolean}
+   *
+   * @protected
+   */
+  #operate = false;
 
-      // Запись соединений в реестры узлов
-      from.outputs.add(connection);
-      to.inputs.add(connection);
+  /**
+   * @name Operate (set)
+   *
+   * @description
+   * Setter for `this.#operate`
+   * Reinitializes operating with nodes processes
+   *
+   * @param {boolean} value Allowed to operate with nodes?
+   *
+   * @public
+   */
+  set operate(value) {
+    if (typeof value === "boolean") {
+      // Validated required argument
 
-      // Запись в реестр ядра
-      this.connections.add(connection);
+      // Writing value to the operate property
+      this.#operate = value;
 
-      // Реинициализация узла-получателя
-      to.init(1);
+      if (this.#operate) {
+        // Allowed to operate with nodes
 
-      // Синхронизация соединения с узлами
-      connection.synchronize(from);
-      connection.synchronize(to);
+        for (const node of this.#nodes) {
+          // Iterating over nodes
 
-      return connection;
+          // Activating the node
+          node.activate(this);
+        }
+      } else {
+        // Not allowed to operate with nodes
+
+        for (const node of this.#nodes) {
+          // Iterating over nodes
+
+          // Deactivating the node
+          node.deactivate();
+        }
+      }
     }
-  };
+  }
+
+  /**
+   * @name Operate (get)
+   *
+   * @description
+   * Getter for `this.#operate`
+   *
+   * @type {boolean}
+   *
+   * @public
+   */
+  get operate() {
+    return this.#operate;
+  }
+
+  /**
+   * @name Variables
+   *
+   * @description
+   * The registry of variables that will be added to the `style` attribute of the HTML-elements
+   *
+   * Editing DOM, including changing argument values,
+   * has a significant impact on performance - try to use as few variables as possible
+   *
+   * @example Write in format without "--graph-shell-"
+   * `["left", true]` will be `style="--graph-shell-left: 180px;"`
+   *
+   * These variables are also stored in the object to avoid reading DOM: "left", "top"
+   *
+   * @type {Map}
+   *
+   * @public
+   */
+  variables = new Map([
+    ["left", { active: true, type: "px" }],
+    ["top", { active: true, type: "px" }]
+  ]);
+
+  /**
+   * @name Listeners
+   *
+   * @description
+   * Registry of event listeners
+   *
+   * @type {Map}
+   *
+   * @protected
+   */
+  #listeners = new Map();
+
+  /**
+   * @name Processes
+   *
+   * @description
+   * Registry of running processes
+   *
+   * @type {Map}
+   *
+   * @protected
+   */
+  #processes = new Map();
+
+  /**
+   * @name Constructor
+   *
+   * @description
+   * Initialize a graph instance
+   *
+   * @param {HTMLElement} shell The shell element
+   **/
+  constructor(shell) {
+    if (shell instanceof HTMLElement) {
+      // Initialized the shell
+
+      // Writing the shell
+      this.#shell = shell;
+
+      // Deinitializing the "dragstart" and the "selectstart" event listeners
+      this.#shell.ondragstart = this.#shell.onselectstart = null;
+    }
+  }
+
+  /**
+   * @name Node
+   *
+   * @description
+   * Registrate the node in the system
+   *
+   * @param {node} target The node instance
+   *
+   * @return {(node|false)} The node, if initialized
+   **/
+  node(target) {
+    if (target instanceof node) {
+      // Validated required arguments
+
+      // Moving the node element
+      target.move(
+        this.#shell.offsetWidth / 2 -
+          target.augmented / 2 +
+          (0.5 - Math.random()) * 500,
+        this.#shell.offsetHeight / 2 -
+          target.augmented / 2 +
+          (0.5 - Math.random()) * 500
+      );
+
+      // Writing into the nodes registry
+      this.#nodes.add(target);
+
+      // Activating the node
+      if (this.#operate) target.activate(this);
+
+      // Exit (success)
+      return target;
+    }
+
+    // Exit (fail)
+    return false;
+  }
+
+  /**
+   * @name Edge
+   *
+   * @description
+   * Registrate the edge in the system
+   *
+   * @param {edge} target The edge instance
+   *
+   * @return {(edge|false)} The edge, if initialized
+   **/
+  edge(target) {
+    if (target instanceof edge) {
+      // Validated required attributes
+
+      if (
+        this.#shell instanceof HTMLElement &&
+        target.shell instanceof SVGElement
+      ) {
+        // Initialized shell elements
+
+        // Writing the edge into the shell element
+        this.#shell.appendChild(target.shell);
+
+        // Writing into the edges registry
+        this.#edges.add(target);
+
+        // Exit (success)
+        return target;
+      }
+    }
+
+    // Exit (fail)
+    return false;
+  }
 }
 
-// Вызов события: "Библиотека загружена и готова к работе"
-document.dispatchEvent(new CustomEvent('graph.loaded', { detail: { graph } }));
+/**
+ * @name Node
+ *
+ * @description
+ * Node of the module for creating graphs
+ *
+ * {@link https://git.mirzaev.sexy/mirzaev/graph.mjs}
+ *
+ * @class
+ * @public
+ *
+ * @license http://www.wtfpl.net/ Do What The Fuck You Want To Public License
+ * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
+ *
+ * @example <caption>Creating a node</caption>
+ * const node = new node(document.getElementById('my_node'));
+ */
+export class node {
+  /**
+   * @name Shell
+   *
+   * @description
+   * Shell of the node
+   *
+   * @type {HTMLElement}
+   *
+   * @protected
+   */
+  #shell;
+
+  /**
+   * @name Shell (get)
+   *
+   * @description
+   * Getter for shell of the node
+   *
+   * @type {HTMLElement}
+   *
+   * @public
+   */
+  get shell() {
+    return this.#shell;
+  }
+
+  /**
+   * @name Left (x-coordinate)
+   *
+   * @type {number} Value in pixels
+   *
+   * @protected
+   */
+  #left;
+
+  /**
+   * @name Left (x-coordinate) (get)
+   *
+   * @description
+   * Getter for `this.#left`
+   *
+   * @type {number} Value in pixels
+   *
+   * @public
+   */
+  get left() {
+    return this.#left || 0;
+  }
+
+  /**
+   * @name Top (y-coordinate)
+   *
+   * @type {number} Value in pixels
+   *
+   * @protected
+   */
+  #top;
+
+  /**
+   * @name Top (y-coordinate) (get)
+   *
+   * @description
+   * Getter for `this.#top`
+   *
+   * @type {number} Value in pixels
+   *
+   * @public
+   */
+  get top() {
+    return this.#top || 0;
+  }
+
+  /**
+   * @name Movement
+   *
+   * @type {object}
+   *
+   * @property {string} status Status of the movement ("moving", "completed")
+   *
+   * @property {object} from
+   * @property {number} from.left Left-coordinate of the start of the movement
+   * @property {number} from.top Top-coordinate of the start of the movement
+   *
+   * @property {object} to
+   * @property {number} to.left Left-coordinate of the end of the movement
+   * @property {number} to.top Top-coordinate of the end of the movement
+   *
+   * @protected
+   */
+  #movement = {
+    status,
+    from: { left: 0, top: 0 },
+    to: { left: 0, top: 0 }
+  };
+
+  /**
+   * @name Inputs
+   *
+   * @description
+   * The regitry of input edges
+   *
+   * @type {Set}
+   *
+   * @protected
+   */
+  #inputs = new Set();
+
+  /**
+   * @name Inputs (get)
+   *
+   * @description
+   * Getter for the regitry of input edges
+   *
+   * @type {Set}
+   *
+   * @public
+   */
+  get inputs() {
+    return this.#inputs;
+  }
+
+  /**
+   * @name Outputs
+   *
+   * @description
+   * The regitry of output edges
+   *
+   * @type {Set}
+   *
+   * @protected
+   */
+  #outputs = new Set();
+
+  /**
+   * @name Outputs (get)
+   *
+   * @description
+   * Getter for the regitry of output edges
+   *
+   * @type {Set}
+   *
+   * @public
+   */
+  get outputs() {
+    return this.#outputs;
+  }
+
+  /**
+   * @name Button
+   *
+   * @description
+   * Identifier of the mouse button that will perform the movement.
+   *
+   * 0: Main button pressed, usually the left button or the un-initialized state
+   * 1: Auxiliary button pressed, usually the wheel button or the middle button (if present)
+   * 2: Secondary button pressed, usually the right button
+   * 3: Fourth button, typically the Browser Back button
+   * 4: Fifth button, typically the Browser Forward button
+   *
+   * {@link https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button}
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  button = 0;
+
+  /**
+   * @name Size
+   *
+   * @description
+   * The HTML-element initial size in pixels
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  size = 100;
+
+  /**
+   * @name Augmented size
+   *
+   * @description
+   * The HTML-element augmented size in pixels
+   *
+   * Will be generated at runtime by formula:
+   * `this.size + (this.addition * this.#inputs.size - this.subtraction * this.#outputs.size)`
+   *
+   * @type {number}
+   *
+   * @protected
+   */
+  #augmented;
+
+  /**
+   * @name Augmented size (get)
+   *
+   * @description
+   * Getter for the augmented size
+   *
+   * The HTML-element augmented size in pixels
+   *
+   * Will be generated at runtime by formula:
+   * `this.size + (this.addition * this.#inputs.size - this.subtraction * this.#outputs.size)`
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  get augmented() {
+    return this.#augmented || this.size || 0;
+  }
+
+  /**
+   * @name Radius (get)
+   *
+   * @description
+   * Getter for the augmented radius
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  get radius() {
+    return this.augmented / 2 || 0;
+  }
+
+  /**
+   * @name Center (get)
+   *
+   * @description
+   * Getter for the node shell HTML-element center coordinates values
+   *
+   * @type {object}
+   *
+   * @property {number} left Left-coordinate from center of the shell HTML-element
+   * @property {number} top Top-coordinate from center of the shell HTML-element
+   *
+   * @public
+   */
+  get center() {
+    return {
+      left: this.radius + this.left,
+      top: this.radius + this.top
+    };
+  }
+
+  /**
+   * @name Addition
+   *
+   * @description
+   * The value of diameter addition
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  addition = 20;
+
+  /**
+   * @name Subtraction
+   *
+   * @description
+   * The value of diameter subtraction
+   *
+   * @type {number}
+   *
+   * @public
+   */
+  subtraction = 5;
+
+  /**
+   * @name Interactions
+   *
+   * @description
+   * Types of the node interactions
+   *
+   * @type {object}
+   *
+   * @property {object} movement Movement of the node
+   * @property {boolean} movement.active Is movement enabled?
+   * @property {object} movement.synchronization
+   * @property {number} movement.synchronization.interval
+   *
+   * @property {object} pushing Pushing with nodes
+   * @property {boolean} pushing.active Is pushing with nodes enabled?
+   * @property {number} pushing.distance
+   *
+   * @property {object} pulling Pulling with nodes
+   * @property {boolean} pulling.active Is pulling with nodes enabled?
+   * @property {number} pulling.distance
+   *
+   * @public
+   */
+  interactions = {
+    movement: {
+      active: true,
+      synchronization: {
+        interval: 20
+      }
+    },
+    pushing: {
+      active: true,
+      distance: 100
+    },
+    pulling: {
+      active: true,
+      distance: 130
+    }
+  };
+
+  /**
+   * @name Variables
+   *
+   * @description
+   * The registry of variables that will be added to the `style` attribute of the HTML-elements
+   *
+   * Editing DOM, including changing argument values,
+   * has a significant impact on performance - try to use as few variables as possible
+   *
+   * @example Write in format without "--graph-node-"
+   * `["left", true]` will be `style="--graph-node-left: 180px;"`
+   *
+   * These variables are also stored in the object to avoid reading DOM: "left", "top"
+   *
+   * @type {Map}
+   *
+   * @public
+   */
+  variables = new Map([
+    ["left", { active: false, type: "px" }],
+    ["top", { active: false, type: "px" }],
+    ["from-left", { active: true, type: "px" }],
+    ["from-top", { active: true, type: "px" }],
+    ["to-left", { active: true, type: "px" }],
+    ["to-top", { active: true, type: "px" }],
+    ["layer", { active: true, type: "" }],
+    ["size", { active: false, type: "px" }],
+    ["augmented", { active: true, type: "px" }],
+    // ["addition", false],
+    // ["subtraction", false],
+    ["inputs", { active: true, type: "" }],
+    ["outputs", { active: false, type: "" }]
+  ]);
+
+  /**
+   * @name Listeners
+   *
+   * @description
+   * Registry of event listeners
+   *
+   * @type {Map}
+   *
+   * @protected
+   */
+  #listeners = new Map();
+
+  /**
+   * @name Processes
+   *
+   * @description
+   * Registry of running processes
+   *
+   * @type {Map}
+   *
+   * @protected
+   */
+  #processes = new Map();
+
+  /**
+   * @name Constructor
+   *
+   * @description
+   * Initialize a node instance
+   *
+   * @param {HTMLElement} shell The node element
+   **/
+  constructor(shell) {
+    if (shell instanceof HTMLElement) {
+      // Validated required arguments
+
+      // Writing the HTML-element
+      this.#shell = shell;
+
+      // Deinitializing the "dragstart" and the "selectstart" event listeners
+      this.#shell.ondragstart = this.#shell.onselectstart = null;
+
+      // Initializing augmented size variable
+      this.augment();
+
+      // Initializing edges variables
+      this.edges();
+    }
+  }
+
+  /**
+   * @name Augment
+   *
+   * @description
+   * Calculate and write augmented size into the node property and argument of the HTML-element
+   **/
+  augment() {
+    // Calculating and writing augmented size into the node property
+    this.#augmented =
+      this.size +
+      (this.addition * this.#inputs.size -
+        this.subtraction * this.#outputs.size);
+
+    // Writing augmented size into the `style` argument of the HTML-element
+    if (this.variables.get("augmented").active)
+      this.#shell?.style.setProperty(
+        "--graph-node-augmented",
+        this.#augmented + this.variables.get("augmented").type
+      );
+  }
+
+  /**
+   * @name Edges
+   *
+   * @description
+   * Write inputs and outputs edges into the `style` argument of the HTML-element
+   **/
+  edges() {
+    // Writing inputs edges into the `style` argument of the HTML-element
+    if (this.variables.get("inputs").active)
+      this.#shell?.style.setProperty(
+        "--graph-node-inputs",
+        this.#inputs.size + this.variables.get("inputs").type
+      );
+
+    // Writing outputs edges into the `style` argument of the HTML-element
+    if (this.variables.get("outputs").active)
+      this.#shell?.style.setProperty(
+        "--graph-node-outputs",
+        this.#outputs.size + this.variables.get("outputs").type
+      );
+  }
+
+  /**
+   * @name Activate
+   *
+   * @description
+   * Activate the node for operating relative to `shell`
+   *
+   * @param {core} graph The graph instance
+   **/
+  activate(graph) {
+    if (graph instanceof core) {
+      // Validated required arguments
+
+      if (this.#shell instanceof HTMLElement) {
+        // Initialized the shell element
+
+        // Initializing link to the instance
+        const instance = this;
+
+        // Disconnecting deprecated event listener for starting moving the node
+        this.#shell.removeEventListener(
+          "mousedown",
+          this.#listeners.get("movement.start")
+        );
+
+        // Initializing event listener for starting moving the node
+        this.#listeners.set("movement.start", (start) => {
+          // Started moving
+
+          if (start.type === "touchstart" || start.button === instance.button) {
+            // Pressing with a finger or a mouse button specified in `instance.button` by the user (mouse, touch)
+
+            // Deinitializing process for checking that the movement was completed
+            if (this.#processes.has("movement"))
+              clearInterval(this.#processes.get("movement"));
+
+            // Writing "left" coordinate into the property
+            this.#left = Math.round(this.#shell.offsetLeft);
+
+            // Writing "top" coordinate into the property
+            this.#top = Math.round(this.#shell.offsetTop);
+
+            // Writing "left" coordinate into the HTML-element attribute
+            if (this.variables.get("left").active)
+              this.#shell.style.setProperty(
+                "--graph-node-left",
+                this.#left + this.variables.get("left").type
+              );
+
+            // Writing "top" coordinate into the HTML-element attribute
+            if (this.variables.get("top").active)
+              this.#shell.style.setProperty(
+                "--graph-node-top",
+                this.#top + this.variables.get("top").type
+              );
+
+            // Writing "from-left" coordinate into the property
+            this.#movement.from.left = this.#left;
+
+            // Writing "from-top" coordinate into the property
+            this.#movement.from.top = this.#top;
+
+            // Writing "from-left" coordinate into the HTML-element attribute
+            if (this.variables.get("from-left").active)
+              this.#shell.style.setProperty(
+                "--graph-node-from-left",
+                this.#movement.from.left + this.variables.get("from-left").type
+              );
+
+            // Writing "from-top" coordinate into the HTML-element attribute
+            if (this.variables.get("from-top").active)
+              this.#shell.style.setProperty(
+                "--graph-node-from-top",
+                this.#movement.from.top + this.variables.get("from-top").type
+              );
+
+            // Writing "to-left" coordinate into the property
+            this.#movement.to.left = this.#left;
+
+            // Writing "to-top" coordinate into the property
+            this.#movement.to.top = this.#top;
+
+            // Writing "to-left" coordinate into the HTML-element attribute
+            if (this.variables.get("to-left").active)
+              this.#shell.style.setProperty(
+                "--graph-node-to-left",
+                this.#movement.to.left + this.variables.get("to-left").type
+              );
+
+            // Writing "to-top" coordinate into the HTML-element attribute
+            if (this.variables.get("to-top").active)
+              this.#shell.style.setProperty(
+                "--graph-node-to-top",
+                this.#movement.to.top + this.variables.get("to-top").type
+              );
+
+            // Writing z-coordinate into the HTML-element attribute
+            if (instance.variables.get("layer").active)
+              instance.#shell.style.setProperty(
+                "--graph-node-layer",
+                50 + instance.variables.get("layer").type
+              );
+
+            // Initializing coordinates
+            const left = start.pageX - instance.shell.offsetLeft + pageXOffset;
+            const top = start.pageY - instance.shell.offsetTop + pageYOffset;
+
+            // Disconnecting deprecated event listener for moving the node
+            document.removeEventListener(
+              "mousemove",
+              instance.#listeners.get("movement")
+            );
+
+            // Initializing event listener for moving the node
+            instance.#listeners.set("movement", (moving) => {
+              // Started moving
+
+              // Moving the node
+              instance.move(moving.pageX - left, moving.pageY - top);
+
+              // Processing pushings by the node
+              instance.push(
+                graph.interactions.pushing.cascade.depth,
+                graph.nodes
+              );
+
+              // Processing pullings by the node
+              instance.pull(graph.interactions.pulling.cascade.depth);
+            });
+
+            // Connecting event listener for moving the node
+            document.addEventListener(
+              "mousemove",
+              instance.#listeners.get("movement")
+            );
+
+            // Disconnecting deprecated event listener for ending moving the node
+            document.removeEventListener(
+              "mouseup",
+              instance.#listeners.get("movement.end")
+            );
+
+            // Initializing event listener for ending movement the node
+            instance.#listeners.set("movement.end", (end) => {
+              // Ended movement
+
+              // Disconnecting event listener for moving the node
+              document.removeEventListener(
+                "mousemove",
+                instance.#listeners.get("movement")
+              );
+
+              // Disconnecting event listener for ending moving the node
+              document.removeEventListener(
+                "mouseup",
+                instance.#listeners.get("movement.end")
+              );
+
+              // Writing status of the movement
+              this.#movement.status = "completed";
+
+              // Writing z-coordinate into the HTML-element attribute
+              if (this.variables.get("layer").active)
+                instance.#shell.style.setProperty(
+                  "--graph-node-layer",
+                  0 + this.variables.get("layer").type
+                );
+
+              // Dispatching event: "node.movement.ended"
+              instance.#shell.dispatchEvent(
+                new CustomEvent("graph.node.movement.ended", {
+                  detail: {
+                    node: instance
+                  }
+                })
+              );
+            });
+
+            // Connecting event listener for ending moving the node
+            document.addEventListener(
+              "mouseup",
+              instance.#listeners.get("movement.end")
+            );
+          }
+        });
+
+        // Connecting event listener for starting moving the node
+        this.shell.addEventListener(
+          "mousedown",
+          this.#listeners.get("movement.start")
+        );
+      }
+    }
+  }
+
+  /**
+   * @name Deactivate
+   *
+   * @description
+   * Deactivate the node for operating relative to `shell`
+   **/
+  deactivate() {
+    // Writing z-coordinate into the HTML-element attribute
+    if (this.variables.get("layer").active)
+      this.#shell.style.setProperty(
+        "--graph-node-layer",
+        500 + this.variables.get("layer").type
+      );
+
+    // Disconnecting event listener for starting moving the node
+    this.#shell.removeEventListener(
+      "mousedown",
+      this.#listeners.get("moving.start")
+    );
+
+    // Disconnecting event listener for moving the node
+    document.removeEventListener("mousemove", this.#listeners.get("moving"));
+
+    // Disconnecting event listener for ending moving the node
+    document.removeEventListener("mouseup", this.#listeners.get("moving.end"));
+  }
+
+  /**
+   * @name Move
+   *
+   * @description
+   * Move the node and handle interactions with other nodes
+   *
+   * @param {number} left Offset from the left (px)
+   * @param {number} top Offset from the top (px)
+   **/
+  async move(left, top) {
+    if (this.interactions.movement.active) {
+      // Activated moving
+
+      if (typeof left === "number" && typeof top === "number") {
+        // Received coordinates arguments
+
+        // Writing "left" coordinate into the property
+        this.#left = Math.round(left);
+
+        // Writing "top" coordinate into the property
+        this.#top = Math.round(top);
+
+        // Writing "left" coordinate into the HTML-element attribute
+        if (this.variables.get("left").active)
+          this.#shell.style.setProperty(
+            "--graph-node-left",
+            this.#left + this.variables.get("left").type
+          );
+
+        // Writing "top" coordinate into the HTML-element attribute
+        if (this.variables.get("top").active)
+          this.#shell.style.setProperty(
+            "--graph-node-top",
+            this.#top + this.variables.get("top").type
+          );
+
+        if (this.#movement.status !== "completed") {
+          // Not completed the movement
+
+          // Initializing CSS-class for movement animation
+          if (!this.#shell.classList.contains("movement"))
+            this.#shell.classList.add("movement");
+
+          // Deinitializing deprecated process for checking that the movement was completed
+          if (this.#processes.has("movement"))
+            clearInterval(this.#processes.get("movement"));
+
+          // Initializing process for checking that the movement was completed
+          this.#processes.set(
+            "movement",
+            setInterval(() => {
+              if (
+                this.#shell.offsetLeft === this.#movement.to.left &&
+                this.#shell.offsetTop === this.#movement.to.top
+              ) {
+                // Completed the movement
+
+                // Deinitializing CSS-class for movement animation (reset)
+                this.#shell.classList.remove("movement");
+
+                // Writing "from" coordinates into the property
+                this.#movement.from = this.#movement.to;
+
+                // Writing "from-left" coordinate into the HTML-element attribute
+                if (this.variables.get("from-left").active)
+                  this.#shell.style.setProperty(
+                    "--graph-node-from-left",
+                    this.#movement.from.left +
+                      this.variables.get("from-left").type
+                  );
+
+                // Writing "from-top" coordinate into the HTML-element attribute
+                if (this.variables.get("from-top").active)
+                  this.#shell.style.setProperty(
+                    "--graph-node-from-top",
+                    this.#movement.from.top +
+                      this.variables.get("from-top").type
+                  );
+
+                // Writing statuf of the movement
+                this.#movement.status = "completed";
+
+                // Deinitializing process for checking that the movement was completed
+                clearInterval(this.#processes.get("movement"));
+              }
+
+              // Synchronize the node edges with the node
+              this.synchronization();
+            }, this.interactions.movement.synchronization.interval)
+          );
+        }
+
+        // Writing status of the movement
+        this.#movement.status = "moving";
+
+        // Writing "to-left" coordinate into the property
+        this.#movement.to.left = this.left;
+
+        // Writing "to-top" coordinate into the property
+        this.#movement.to.top = this.top;
+
+        // Writing "to-left" coordinate into the HTML-element attribute
+        if (this.variables.get("to-left").active)
+          this.#shell.style.setProperty(
+            "--graph-node-to-left",
+            this.#movement.to.left + this.variables.get("to-left").type
+          );
+
+        // Writing "to-top" coordinate into the HTML-element attribute
+        if (this.variables.get("to-top").active)
+          this.#shell.style.setProperty(
+            "--graph-node-to-top",
+            this.#movement.to.top + this.variables.get("to-top").type
+          );
+      }
+
+      // Synchronize the node edges with the node
+      this.synchronization();
+    }
+  }
+
+  /**
+   * @name Push
+   *
+   * @description
+   * Push `nodes` from the node
+   *
+   * @param {number} [depth=1] Amount of cascade reactions (the value will be reduced to 0 in recursion)
+   * @param {(Set|Array|undefined)} [nodes=undefined] Nodes for processing (otherwise `this.inputs` + `this.outputs`)
+   */
+  async push(depth = 1, nodes) {
+    if (
+      typeof depth === "number" &&
+      (nodes instanceof Set ||
+        nodes instanceof Array ||
+        typeof nodes === "undefined")
+    ) {
+      // Validated required argument
+
+      if (--depth >= 0) {
+        // Not reached iterations limit
+
+        if (this.interactions.pushing.active) {
+          // Activated pushing
+
+          for (const node of (nodes?.size > 0 || nodes?.length > 0
+            ? [...nodes]
+            : [...this.inputs]
+                .map((edge) => edge.from)
+                .concat([...this.outputs].map((edge) => edge.to))
+          ).filter((node) => node !== this)) {
+            // Iterating over nodes
+
+            if (node.interactions.pushing.active) {
+              // Activated pushing
+
+              // Initializing the vector between nodes
+              const between = new Victor(
+                node.center.left - this.center.left,
+                node.center.top - this.center.top
+              );
+
+              // Calculation of the arithmetic mean of nodes pushing distance
+              const distance =
+                (node.interactions.pushing.distance +
+                  this.interactions.pushing.distance) /
+                2;
+
+              // Calculating difference between needed distance and actial distance
+              const difference =
+                node.radius + this.radius + distance - between.length();
+
+              if (difference > 0) {
+                // The node have not overcome the pushing distance
+
+                // Initializing vector of pushing distance
+                const pushing = new Victor(difference, difference);
+
+                // Generating vector for moving the target node
+                const vector = new Victor(node.left, node.top).add(
+                  pushing.rotate(between.angle() - pushing.angle())
+                );
+
+                // Moving the target node
+                node.move(vector.x, vector.y);
+              }
+
+              // Processing pushings by the node (entering into recursion)
+              node.push(depth, nodes);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * @name Pull
+   *
+   * @description
+   * Pull `nodes` to the node
+   *
+   * @param {number} [depth=1] Amount of cascade reactions (the value will be reduced to 0 in recursion)
+   * @param {(Set|Array|undefined)} [nodes=undefined] Nodes for processing (otherwise `this.inputs` + `this.outputs`)
+   */
+  async pull(depth = 1, nodes) {
+    if (
+      typeof depth === "number" &&
+      (nodes instanceof Set ||
+        nodes instanceof Array ||
+        typeof nodes === "undefined")
+    ) {
+      // Validated required argument
+
+      if (--depth >= 0) {
+        // Not reached iterations limit
+
+        if (this.interactions.pulling.active) {
+          // Activated pulling
+
+          for (const node of (nodes?.size > 0 || nodes?.length > 0
+            ? [...nodes]
+            : [...this.inputs]
+                .map((edge) => edge.from)
+                .concat([...this.outputs].map((edge) => edge.to))
+          ).filter((node) => node !== this)) {
+            // Iterating over nodes
+
+            if (node.interactions.pulling.active) {
+              // Activated pulling
+
+              // Initializing the vector between nodes
+              const between = new Victor(
+                node.center.left - this.center.left,
+                node.center.top - this.center.top
+              );
+
+              // Calculation of the arithmetic mean of nodes pulling distance
+              const distance =
+                (node.interactions.pulling.distance +
+                  this.interactions.pulling.distance) /
+                2;
+
+              // Calculating difference between needed distance and actial distance
+              const difference =
+                node.radius + this.radius + distance - between.length();
+
+              if (difference <= 0) {
+                // The node have not overcome the pulling distance
+
+                // Initializing vector of pulling distance
+                const pulling = new Victor(difference, difference);
+
+                // Generating vector for moving the target node
+                const vector = new Victor(node.left, node.top).add(
+                  pulling.rotate(between.angle() - pulling.angle()).invert()
+                );
+
+                // Moving the target node
+                node.move(vector.x, vector.y);
+              }
+
+              // Processing pullings by the node (entering into recursion)
+              node.pull(depth, nodes);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * @name Synchronization
+   *
+   * @description
+   * Synchronize all the node edges with the node
+   **/
+  synchronization() {
+    for (const edge of this.outputs) {
+      // Iterating over the node outputs edges
+
+      // Synchronizing the output edge with the node
+      edge.synchronization(this);
+    }
+
+    for (const edge of this.inputs) {
+      // Iterating over the node inputs edges
+
+      // Synchronizing the input edge with the node
+      edge.synchronization(this);
+    }
+  }
+}
+
+/**
+ * @name Edge
+ *
+ * @description
+ * Edge of the module for creating graphs
+ *
+ * {@link https://git.mirzaev.sexy/mirzaev/graph.mjs}
+ *
+ * @class
+ * @public
+ *
+ * @license http://www.wtfpl.net/ Do What The Fuck You Want To Public License
+ * @author Arsen Mirzaev Tatyano-Muradovich <arsen@mirzaev.sexy>
+ *
+ * @example <caption>Creating an edge</caption>
+ * instance.edge(new edge(node_1, node_2));
+ */
+export class edge {
+  /**
+   * @name Shell
+   *
+   * @description
+   * Shell of the edge
+   *
+   * @type {SVGElement}
+   *
+   * @protected
+   */
+  #shell;
+
+  /**
+   * @name Shell (get)
+   *
+   * @description
+   * Getter for shell of the edge
+   *
+   * @type {SVGElement}
+   *
+   * @public
+   */
+  get shell() {
+    return this.#shell;
+  }
+
+  /**
+   * @name Line
+   *
+   * @description
+   * The <line> element of the edge
+   *
+   * @type {SVGElement}
+   *
+   * @protected
+   */
+  #line;
+
+  /**
+   * @name Line (get)
+   *
+   * @description
+   * Getter of the <line> element of the edge
+   *
+   * @type {SVGElement}
+   *
+   * @public
+   */
+  get line() {
+    return this.#line;
+  }
+
+  /**
+   * @name From
+   *
+   * @description
+   * The node from which the edge comes
+   *
+   * @type {node}
+   *
+   * @protected
+   */
+  #from;
+
+  /**
+   * @name From (get)
+   *
+   * @description
+   * Getter for the node from which the edge comes
+   *
+   * @type {node}
+   *
+   * @public
+   */
+  get from() {
+    return this.#from;
+  }
+
+  /**
+   * @name To
+   *
+   * @description
+   * The node into which the edge enters
+   *
+   * @type {node}
+   *
+   * @protected
+   */
+  #to;
+
+  /**
+   * @name To (get)
+   *
+   * @description
+   * Getter for the node into which the edge enters
+   *
+   * @type {node}
+   *
+   * @public
+   */
+  get to() {
+    return this.#to;
+  }
+
+  /**
+   * @name Constructor
+   *
+   * @description
+   * Initialize an edge instance
+   *
+   * @param {node} from The node from which the edge comes
+   * @param {node} to The node into which the edge enters
+   **/
+  constructor(from, to) {
+    if (from instanceof node && to instanceof node) {
+      // Validated required arguments
+
+      if (
+        from.shell instanceof HTMLElement &&
+        to.shell instanceof HTMLElement
+      ) {
+        // Initialized shell elements
+
+        // Writing nodes into properties
+        this.#from = from;
+        this.#to = to;
+
+        // Writing the edge into nodes edges registries
+        this.#from.outputs.add(this);
+        this.#to.inputs.add(this);
+
+        // Reinitializing augmented size of nodes
+        this.#from.augment();
+        this.#to.augment();
+
+        // Reinitializing edges variables of nodes
+        this.#from.edges();
+        this.#to.edges();
+
+        // Initializing the edge shell <svg> element
+        const svg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg"
+        );
+
+        // Writing identifier of the edge shell <svg> element
+        svg.setAttribute(
+          "id",
+          from.shell.getAttribute("id") + "_" + to.shell.getAttribute("id")
+        );
+
+        // Writing classes of the edge shell <svg> element
+        svg.classList.add("edge");
+
+        // Deinitializing the "dragstart" and the "selectstart" event listeners of the edge shell <svg> element
+        svg.ondragstart = svg.onselectstart = null;
+
+        // Initializing the edge <line> element
+        const line = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+
+        // Writing coordinates of the edge <line> element
+        line.setAttribute("x1", from.left + from.radius);
+        line.setAttribute("y1", from.top + from.radius);
+        line.setAttribute("x2", to.left + to.radius);
+        line.setAttribute("y2", to.top + to.radius);
+
+        // Writing the edge shell <svg> element into property
+        this.#shell = svg;
+
+        // Writing the edge <line> element into property
+        this.#line = line;
+
+        // Writing the edge <line> element into the edge shell <svg> element
+        svg.append(line);
+      }
+    }
+  }
+
+  /**
+   * Синхронизировать местоположение со связанным узлом
+   *
+   * @param {node} node Инстанция узла (связанного с соединением)
+   */
+
+  /**
+   * @name Synchronization
+   *
+   * @description
+   * Synchronize node and edge coordinates
+   *
+   * @param {node} node The node with which the edge will be synchronized
+   **/
+  async synchronization(node) {
+    if (node === this.#from) {
+      // Output connection
+
+      // Writing coordinates (offsetLeft and offsetTop for CSS animations)
+      this.#line?.setAttribute("x1", node.shell.offsetLeft + node.radius);
+      this.#line?.setAttribute("y1", node.shell.offsetTop + node.radius);
+    } else if (node === this.#to) {
+      // Input connection
+
+      // Writing coordinates (offsetLeft and offsetTop for CSS animations)
+      this.#line?.setAttribute("x2", node.shell.offsetLeft + node.radius);
+      this.#line?.setAttribute("y2", node.shell.offsetTop + node.radius);
+    }
+  }
+}
